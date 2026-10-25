@@ -1,0 +1,13 @@
+{
+  "name": "d3-force-3d",
+  "version": "3.0.6",
+  "license": "MIT",
+  "author": {
+    "name": "Vasco Asturiano",
+    "url": "https://github.com/vasturiano"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vasturiano/d3-force-3d.git"
+  }
+}

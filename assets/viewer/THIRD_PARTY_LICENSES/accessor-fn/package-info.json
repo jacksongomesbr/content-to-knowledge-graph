@@ -1,0 +1,13 @@
+{
+  "name": "accessor-fn",
+  "version": "1.5.3",
+  "license": "MIT",
+  "author": {
+    "name": "Vasco Asturiano",
+    "url": "https://github.com/vasturiano"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vasturiano/accessor-fn.git"
+  }
+}

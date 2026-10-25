@@ -1,0 +1,10 @@
+* text=auto eol=lf
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.png binary
+
+# Preserve third-party license files verbatim.
+**/THIRD_PARTY_LICENSES/** -text -whitespace
+# The compiled viewer is generated output.
+assets/viewer/dist/** -whitespace

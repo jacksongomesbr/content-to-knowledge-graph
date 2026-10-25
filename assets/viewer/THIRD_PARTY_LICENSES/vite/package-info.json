@@ -1,0 +1,11 @@
+{
+  "name": "vite",
+  "version": "7.3.7",
+  "license": "MIT",
+  "author": "Evan You",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vitejs/vite.git",
+    "directory": "packages/vite"
+  }
+}

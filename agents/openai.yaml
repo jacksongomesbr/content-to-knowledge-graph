@@ -1,0 +1,3 @@
+interface:
+  display_name: "Conteúdo para grafo de conhecimento"
+  short_description: "Extraia entidades e relações com fontes rastreáveis"

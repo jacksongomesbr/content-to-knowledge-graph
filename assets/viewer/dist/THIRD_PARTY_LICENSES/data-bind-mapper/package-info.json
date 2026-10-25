@@ -1,0 +1,13 @@
+{
+  "name": "data-bind-mapper",
+  "version": "1.0.3",
+  "license": "MIT",
+  "author": {
+    "name": "Vasco Asturiano",
+    "url": "https://github.com/vasturiano"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vasturiano/data-bind-mapper.git"
+  }
+}

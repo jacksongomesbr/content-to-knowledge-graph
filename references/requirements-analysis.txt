@@ -1,0 +1,12 @@
+# Especificação inicial. Resolver, testar e gerar lock por projeto/plataforma.
+numpy
+scipy
+scikit-learn
+networkx
+jsonschema
+PyYAML
+sentence-transformers
+torch
+pypdf
+python-docx
+beautifulsoup4

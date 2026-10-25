@@ -1,0 +1,10 @@
+{
+  "name": "tsx",
+  "version": "4.23.15",
+  "license": "MIT",
+  "author": {
+    "name": "Hiroki Osame",
+    "email": "hiroki.osame@gmail.com"
+  },
+  "repository": "privatenumber/tsx"
+}

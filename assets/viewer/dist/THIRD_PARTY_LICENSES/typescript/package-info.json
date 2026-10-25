@@ -1,0 +1,10 @@
+{
+  "name": "typescript",
+  "version": "5.9.3",
+  "license": "Apache-2.0",
+  "author": "Microsoft Corp.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/microsoft/TypeScript.git"
+  }
+}

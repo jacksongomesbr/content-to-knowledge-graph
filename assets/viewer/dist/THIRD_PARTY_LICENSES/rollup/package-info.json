@@ -1,0 +1,10 @@
+{
+  "name": "rollup",
+  "version": "4.64.12",
+  "license": "MIT",
+  "author": "Rich Harris",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rollup/rollup.git"
+  }
+}

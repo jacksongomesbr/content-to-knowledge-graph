@@ -1,0 +1,10 @@
+{
+  "name": "polished",
+  "version": "4.3.1",
+  "license": "MIT",
+  "author": "Brian Hough <hello@brianhough.co> (https://polished.js.org)",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/styled-components/polished.git"
+  }
+}

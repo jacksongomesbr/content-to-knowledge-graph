@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "bookUrl": "http://localhost:5173/",
+  "bibliography": {},
+  "sources": {
+    "manual-web": {
+      "title": "Manual",
+      "chapter": 0,
+      "path": "evidence/manual.html",
+      "sourceFile": "example.md",
+      "section": "Web e Internet",
+      "anchor": "web-internet",
+      "citations": []
+    }
+  },
+  "nodes": [
+    {
+      "id": "web",
+      "label": "Web",
+      "type": "concept",
+      "theme": "web",
+      "summary": "Sistema que utiliza a infraestrutura da Internet.",
+      "detail": "Definição limitada ao trecho consultado.",
+      "sources": [
+        "manual-web"
+      ]
+    },
+    {
+      "id": "internet",
+      "label": "Internet",
+      "type": "concept",
+      "theme": "web",
+      "summary": "Infraestrutura utilizada pela Web.",
+      "detail": "Definição limitada ao trecho consultado.",
+      "sources": [
+        "manual-web"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "web-uses-internet",
+      "source": "web",
+      "target": "internet",
+      "label": "utiliza a infraestrutura da",
+      "summary": "A Web utiliza a infraestrutura da Internet.",
+      "sources": [
+        "manual-web"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // Apply before the stylesheet and first paint to avoid a light flash.
+      (() => {
+        let mode = "system";
+        try {
+          mode = localStorage.getItem("knowledge-graph:appearance") || "system";
+        } catch {}
+        document.documentElement.dataset.theme =
+          mode === "dark" ||
+          (mode !== "light" &&
+            matchMedia("(prefers-color-scheme: dark)").matches)
+            ? "dark"
+            : "light";
+      })();
+    </script>
+    <meta name="theme-color" content="#f5f4ef" />
+    <meta
+      name="description"
+      content="Explore entidades, relações e fontes de um grafo de conhecimento."
+    />
+    <title>Explorador de conhecimento</title>
+    <script type="module" crossorigin src="./assets/index-DpMidbIM.js"></script>
+    <link rel="modulepreload" crossorigin href="./assets/graph-CEZom8uL.js">
+    <link rel="modulepreload" crossorigin href="./assets/math-uLN8M5ZI.js">
+    <link rel="stylesheet" crossorigin href="./assets/index-Dbawj_LP.css">
+  </head>
+  <body>
+    <div id="app"></div>
+  </body>
+</html>

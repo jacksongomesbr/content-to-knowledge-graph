@@ -1,0 +1,10 @@
+{
+  "name": "ngraph.merge",
+  "version": "1.0.0",
+  "license": "MIT",
+  "author": "Andrei Kashcha",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anvaka/ngraph.merge"
+  }
+}

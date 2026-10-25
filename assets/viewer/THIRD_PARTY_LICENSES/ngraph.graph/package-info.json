@@ -1,0 +1,10 @@
+{
+  "name": "ngraph.graph",
+  "version": "20.1.2",
+  "license": "BSD-3-Clause",
+  "author": "Andrei Kashcha",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anvaka/ngraph.graph.git"
+  }
+}

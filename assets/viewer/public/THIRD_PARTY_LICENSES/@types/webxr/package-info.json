@@ -1,0 +1,10 @@
+{
+  "name": "@types/webxr",
+  "version": "0.5.24",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DefinitelyTyped/DefinitelyTyped.git",
+    "directory": "types/webxr"
+  }
+}

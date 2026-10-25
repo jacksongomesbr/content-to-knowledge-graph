@@ -1,0 +1,7 @@
+{
+  "name": "postcss",
+  "version": "8.5.31",
+  "license": "MIT",
+  "author": "Andrey Sitnik <andrey@sitnik.es>",
+  "repository": "postcss/postcss"
+}

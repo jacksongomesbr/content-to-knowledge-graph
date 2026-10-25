@@ -1,0 +1,10 @@
+{
+  "name": "ngraph.forcelayout",
+  "version": "3.3.1",
+  "license": "BSD-3-Clause",
+  "author": "Andrei Kashcha",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anvaka/ngraph.forcelayout.git"
+  }
+}

@@ -1,0 +1,24 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+node_modules/
+.DS_Store
+.env
+.env.*
+!.env.example
+.pytest_cache/
+.ruff_cache/
+.cache/
+.wikipedia-cache/
+.huggingface/
+playwright-report/
+test-results/
+work/
+outputs/
+*.npy
+*.npz
+*.safetensors
+*.pt
+*.pth
+# The precompiled viewer under assets/viewer/dist is intentionally versioned.

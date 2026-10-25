@@ -1,0 +1,13 @@
+{
+  "name": "three-forcegraph",
+  "version": "1.43.6",
+  "license": "MIT",
+  "author": {
+    "name": "Vasco Asturiano",
+    "url": "https://github.com/vasturiano"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vasturiano/three-forcegraph.git"
+  }
+}

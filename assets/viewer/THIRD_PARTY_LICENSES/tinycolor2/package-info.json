@@ -1,0 +1,10 @@
+{
+  "name": "tinycolor2",
+  "version": "1.6.0",
+  "license": "MIT",
+  "author": "Brian Grinstead <briangrinstead@gmail.com> (http://briangrinstead.com)",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bgrins/TinyColor.git"
+  }
+}

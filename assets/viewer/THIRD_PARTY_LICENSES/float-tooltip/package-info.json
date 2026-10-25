@@ -1,0 +1,13 @@
+{
+  "name": "float-tooltip",
+  "version": "1.7.5",
+  "license": "MIT",
+  "author": {
+    "name": "Vasco Asturiano",
+    "url": "https://github.com/vasturiano"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vasturiano/float-tooltip.git"
+  }
+}
