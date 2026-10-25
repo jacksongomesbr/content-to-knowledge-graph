@@ -1,91 +1,129 @@
 # Conteúdo para grafo de conhecimento
 
-Skill para agentes que transforma livros, documentos, pastas e skills de conteúdo em um grafo de conhecimento com entidades, relações e fontes rastreáveis. Inclui scripts Python e um visualizador 3D que abre no navegador.
+Skill para agentes que transforma livros, documentos, pastas e skills de conteúdo em uma base de conhecimento **Markdown com frontmatter**. Inclui fontes rastreáveis, índice SQLite/FTS5, embeddings locais, enriquecimento com Wikipédia e um visualizador 3D no navegador.
 
-O contrato de dados é compatível com o modelo `grafo-do-livro v1`, do projeto [uft-cc-dwm](https://github.com/jacksongomesbr/uft-cc-dwm). A cópia adaptada do visualizador aceita outros domínios e não depende do livro original.
+```text
+Markdown canônico → validação/indexação → SQLite + embeddings
+                                      → graph.json + layout → navegador
+```
+
+Edite os Markdown; reconstrua os derivados. O JSON preserva a compatibilidade com o visualizador [grafo-do-livro](https://github.com/jacksongomesbr/uft-cc-dwm), mas deixa de ser a fonte principal. IDs são independentes dos nomes dos arquivos.
 
 ## Instalar no Codex
 
-Clone o repositório para a pasta pessoal de skills. O destino deve estar livre; preserve uma instalação anterior antes de trocar sua origem.
+Clone para uma pasta de skill disponível, preservando uma instalação anterior:
 
 ```sh
 git clone https://github.com/jacksongomesbr/content-to-knowledge-graph.git ~/.codex/skills/content-to-knowledge-graph
 ```
 
-Se já tiver instalado a skill por esse clone, atualize com `git -C ~/.codex/skills/content-to-knowledge-graph pull --ff-only`. Em hosts que carregam o catálogo no início da conversa, abra uma nova conversa para descobrir a skill.
-
-## Usar
+Para instalações feitas por clone, atualize com `git -C ~/.codex/skills/content-to-knowledge-graph pull --ff-only`. Abra nova conversa quando o host carregar o catálogo de skills apenas no início.
 
 ```text
 Use $content-to-knowledge-graph.
 Origem: /caminho/do/conteudo
-Destino: /caminho/do/grafo
+Destino: /caminho/da/base
 ```
 
-O agente inventaria as fontes, extrai entidades e relações, registra evidências e cobertura, busca artigos correspondentes na Wikipédia, gera embeddings locais e inicia o visualizador. Você também pode pedir apenas os dados ou atualizar um grafo existente preservando IDs.
+O agente inventaria o corpus, extrai entidades/relações e evidências, escreve os Markdown, indexa, consulta a Wikipédia, gera embeddings e abre o visualizador. Pode também entregar apenas dados ou atualizar uma base existente. Extração semântica e revisão de correspondências são tarefas do agente; scripts não aprovam fatos pela igualdade de nomes ou similaridade.
 
-A extração semântica e a revisão das correspondências da Wikipédia são tarefas do agente. Os scripts automatizam extração textual, validação, inferência de embeddings, consultas e aplicação de decisões; não substituem essas revisões por igualdade de nomes ou similaridade vetorial.
+## Experimentar o exemplo
 
-## Abrir o exemplo sem instalar dependências
-
-Python 3.10 ou superior basta para validar o grafo e iniciar o visualizador compilado:
+Python 3.11/3.12 com SQLite/FTS5 e PyYAML basta para base, índice e navegador. Use um venv:
 
 ```sh
-python3 scripts/validate_graph.py examples/graph.json
-python3 scripts/start_viewer.py examples/graph.json
+python3 -m venv .venv
+.venv/bin/python -m pip install -r references/requirements-core.txt
+.venv/bin/python scripts/knowledge.py build examples
+.venv/bin/python scripts/knowledge.py search examples "World Wide Web" --kind entity
+.venv/bin/python scripts/knowledge.py neighbors examples web --direction out
+.venv/bin/python scripts/start_viewer.py examples
 ```
 
-O servidor escolhe uma porta livre em `127.0.0.1`, imprime a URL e abre o navegador. Encerre com Ctrl+C. Use `--no-open` para apenas obter a URL. O visualizador vem pronto: Node é necessário somente para recompilá-lo. As fontes locais de evidências ficam em `evidence/` junto ao grafo.
+O servidor compila a base e abre localhost numa porta livre. Ctrl+C encerra. Use --no-open para apenas imprimir a URL. O bundle vem pronto; Node não é necessário para servir. Fontes Markdown, corpus, índice e vetores não são publicados pelo servidor.
 
-## Preparar análise e embeddings
+## Estrutura da base
 
-Prefira Python 3.12 compatível com PyTorch na sua plataforma:
+```text
+projeto/
+  knowledge/
+    knowledge.yml
+    entities/*.md
+    relations/*.md
+    sources/*.md
+    bibliography/*.md
+  .generated/               # reconstruível; não versionar
+    index.sqlite
+    graph.json
+    layout.json
+    provenance.json
+    manifest.json
+    evidence/*.html
+    embeddings/
+```
+
+Frontmatter guarda IDs, tipos, aliases, fontes, qualificadores e Wikipédia. O corpo guarda explicações ou evidências. Relações são registros explícitos com origem/destino, predicado e fontes; links no texto não viram arestas automaticamente. Veja o [contrato Markdown](references/knowledge-format.md).
+
+## Migrar JSON existente
+
+```sh
+.venv/bin/python scripts/knowledge.py import-json /origem/graph.json --output /destino/knowledge
+.venv/bin/python scripts/knowledge.py build /destino
+```
+
+O JSON em examples/graph.json é uma fixture legada para migração. A migração exige destino novo, preserva o JSON original e mantém IDs, explicações e referências. Relações sem classificação anterior recebem basis: unspecified. A partir daí, edite somente os documentos. Os scripts ainda aceitam JSON legado para interoperabilidade; não há sincronização bidirecional.
+
+## Análise e embeddings
 
 ```sh
 python3.12 scripts/prepare_environment.py --venv .venv
-.venv/bin/python scripts/prepare_environment.py --check
+.venv/bin/python scripts/generate_embeddings.py --graph /destino \
+  --model sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2 \
+  --output /destino/.generated/embeddings
+.venv/bin/python scripts/search_knowledge.py /destino "infraestrutura de comunicação" --mode hybrid
 ```
 
-O preparo usa um ambiente isolado, instala a especificação base e registra as versões resolvidas. Há um lock testado para macOS arm64/Python 3.12 em `references/requirements-macos-arm64-python312.lock.txt`, selecionável com `--requirements`. Não utilize esse lock como garantia para outras plataformas.
+O perfil completo instala leitores de documentos, NumPy, NetworkX, Sentence Transformers/PyTorch e ferramentas de análise num ambiente isolado. O primeiro uso do modelo pode baixar pesos públicos; a inferência é local. Há também um lock testado para macOS arm64/Python 3.12.
 
-Embeddings exigem um modelo local; o primeiro uso pode baixar pesos públicos. O fluxo padrão consulta a Wikipédia enviando rótulos de entidades, sem transmitir o corpus nem os embeddings. Falhas de rede e falta de correspondência são registradas. Nenhum link é forçado.
+O cache de entidades é incremental: um texto/alias alterado recalcula somente seu vetor. Trocar Wikipédia, datas ou nome do arquivo mantém os vetores; mudar modelo/revisão/parâmetros invalida o cache correspondente. Hashes, revisão, dimensão, normalização e contadores ficam no manifesto. Chunks do corpus ainda são recompostos por completo.
 
-## Formato de saída
+Busca lexical usa FTS5/BM25; a semântica usa cosseno; a híbrida combina rankings por RRF. São ferramentas de recuperação, não prova de identidade ou relação. Consultas recusam índices/vetores desatualizados. A posição editorial no visualizador não representa a distância dos embeddings.
 
-- `graph.json`: fontes e bibliografia em mapas; entidades e relações em listas.
-- `coverage.json` e `provenance.json`: cobertura e evidências detalhadas.
-- `MODEL.md`: decisões de modelagem e vocabulário.
-- `embeddings/`: vetores, IDs alinhados e manifesto do modelo/revisão.
-- Relatórios da Wikipédia: candidatos, decisões e auditoria.
-- `layout.json`, quando exportado: posições editoriais e hash dos dados.
+## Wikipédia por padrão
 
-A leitura complementar não muda as definições nem as evidências do corpus. A disposição gráfica não mede similaridade semântica.
+Em toda criação/atualização, o agente executa discover, revisa o sentido dos candidatos e aplica as decisões na base. Prefere português e usa inglês quando necessário. O script revalida página, revisão, URL e desambiguação antes de atualizar os frontmatters. Entidades sem correspondência segura ficam sem link, com motivo registrado.
+
+Somente rótulos são enviados nas consultas, sem corpus nem embeddings. A leitura complementar não altera as definições ou evidências do material. Restrições explícitas de rede prevalecem; falhas são declaradas como cobertura parcial. Veja o [fluxo completo](references/wikipedia.md).
 
 ## Scripts e documentação
 
 | Script | Função |
 |---|---|
-| `prepare_environment.py` | Preparar ambiente e verificar imports reais |
-| `extract_corpus.py` | Extrair texto de TXT, Markdown, Quarto, HTML, PDF textual, DOCX e EPUB |
-| `validate_graph.py` | Validar contrato e layout |
+| `prepare_environment.py` | Preparar ambiente e testar imports |
+| `extract_corpus.py` | Extrair texto de documentos |
+| `knowledge.py` | Migrar, validar, indexar, buscar, percorrer e recuperar uma base |
+| `search_knowledge.py` | Busca lexical, semântica e híbrida |
+| `validate_graph.py` | Validar base ou exportação e layout |
 | `analyze_graph.py` | Métricas e candidatos por similaridade |
-| `generate_embeddings.py` | Inferência local, chunking e manifesto |
-| `enrich_wikipedia.py` | Descobrir artigos e aplicar correspondências revisadas |
-| `start_viewer.py` | Servir o visualizador com o grafo indicado |
+| `generate_embeddings.py` | Inferência local com cache de entidades |
+| `enrich_wikipedia.py` | Descoberta e aplicação de links revisados |
+| `start_viewer.py` | Compilar/servir a base ou abrir JSON legado |
 
-Veja [SKILL.md](SKILL.md), [comandos de execução](references/running.md), [contrato](references/graph-contract.md), [ambiente Python](references/python-and-embeddings.md) e [fluxo da Wikipédia](references/wikipedia.md).
+Leia [SKILL.md](SKILL.md), [comandos](references/running.md), [Markdown/indexação](references/knowledge-format.md), [exportação JSON](references/graph-contract.md) e [ambiente ML](references/python-and-embeddings.md).
 
-## Desenvolvimento e testes
+## Desenvolvimento
 
 ```sh
-python3 -m unittest discover -s scripts -p 'test_*.py'
-python3 -m compileall -q scripts
+.venv/bin/python -m unittest discover -s scripts -p 'test_*.py'
+.venv/bin/python -m compileall -q scripts
 npm ci --ignore-scripts --prefix assets/viewer
 npm run build --prefix assets/viewer
 ```
 
-Node 22.12+ ou outra versão suportada pelo Vite 7 é necessário para compilar. As fontes ficam em `assets/viewer/src/`; o build e as fontes, incluindo licenças, são distribuídos juntos. O CI executa testes offline dos scripts e compila o visualizador. Testes reais de modelos e de rede devem ser executados separadamente para não depender de downloads e serviços externos a cada commit.
+Node 22.12+ compatível com Vite 7 é necessário somente para recompilar o app. Versione os Markdown e as fontes do app; não versione .generated, modelos, caches, corpus pessoais, tokens, venvs ou node_modules. O bundle do visualizador é distribuído versionado para permitir uso sem build.
 
-## Licença e atribuição
+O CI executa testes offline, constrói o índice do exemplo e compila o visualizador. Inferência real e rede são testadas separadamente para não depender de downloads e serviços externos a cada commit.
 
-Este projeto é distribuído sob [CC BY-SA 4.0](LICENSE.md), preservando a licença do projeto de referência. O visualizador deriva de **grafo-do-livro**, de **Jackson Gomes**, no projeto uft-cc-dwm; adaptações estão registradas em [ATTRIBUTION.md](assets/viewer/ATTRIBUTION.md). As dependências conservam suas próprias licenças, incluídas em `assets/viewer/THIRD_PARTY_LICENSES/`.
+## Licença e créditos
+
+Projeto sob [CC BY-SA 4.0](LICENSE.md). O visualizador deriva de **grafo-do-livro**, de **Jackson Gomes**, no projeto uft-cc-dwm; adaptações estão registradas em [ATTRIBUTION.md](assets/viewer/ATTRIBUTION.md). Dependências conservam suas próprias licenças, incluídas no pacote.

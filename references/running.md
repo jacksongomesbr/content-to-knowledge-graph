@@ -1,87 +1,109 @@
-# Scripts e início do visualizador
+# Comandos da base Markdown
 
-Resolva `SKILL_DIR` como a pasta desta skill; não dependa do diretório atual. Os comandos abaixo usam caminhos de exemplo entre aspas. `python3` basta para extração TXT/Markdown/Quarto, validação e servidor; use o Python do ambiente de análise para formatos adicionais, métricas e embeddings.
+Resolva SKILL_DIR como a pasta da skill e PYTHON como o executável do ambiente escolhido. No Windows, o Python de venv fica em Scripts/python.exe. Os caminhos abaixo são exemplos, substitua-os pelo destino real.
 
-## Preparação
+## Ambiente
 
 ```sh
-python3 "$SKILL_DIR/scripts/prepare_environment.py" --check
 python3.12 "$SKILL_DIR/scripts/prepare_environment.py" --venv "/destino/.venv"
+"/destino/.venv/bin/python" "$SKILL_DIR/scripts/prepare_environment.py" --check
 ```
 
-`--check` testa imports em subprocessos e retorna erro se houver ausências ou incompatibilidades. Use um Python 3.11/3.12 disponível para preparar o venv se o Python padrão for incompatível. O preparo instala `requirements-analysis.txt`, executa pip check e imports e grava lock junto ao venv. Não baixa pesos; o teste real de inferência é o comando de embeddings. Não altere Python global. Se já existir ambiente adequado, use seu executável absoluto. Há um lock testado em macOS arm64/Python 3.12 em `requirements-macos-arm64-python312.lock.txt`; nessa plataforma, passe-o por `--requirements`. Em outras plataformas, resolva a especificação base e teste antes de fixar versões.
+O perfil completo inclui leitores de documentos, análise e ML. Para usar apenas Markdown, índice e visualizador, prepare o venv com `--profile core`. PyYAML e SQLite/FTS5 são suficientes para esse perfil; use `--check --profile core` para verificar apenas o perfil leve, incluindo uma criação real de tabela FTS5 em memória. Sem --profile, o perfil de análise é usado.
 
-## Extração e modelagem
+O preparo verifica imports reais e grava requirements-analysis.lock.txt. Há um lock testado para macOS arm64/Python 3.12 em references/requirements-macos-arm64-python312.lock.txt, selecionável com --requirements. Não use esse lock como garantia para outra plataforma. Não altere o Python global.
+
+## Extração textual e autoria
 
 ```sh
-"/destino/.venv/bin/python" "$SKILL_DIR/scripts/extract_corpus.py" "/origem/livro" "/origem/artigos.pdf" --output "/destino/corpus"
+"$PYTHON" "$SKILL_DIR/scripts/extract_corpus.py" "/origem/livro" --output "/destino/corpus"
 ```
 
-O script extrai TXT, MD, QMD, HTML, PDF textual, DOCX e EPUB para `units.jsonl` com localizadores e hashes, e grava `coverage.json`. Não segue symlinks e exclui dependências, renders e o próprio destino. Exige destino novo/vazio. Não acessa URLs nem faz OCR/transcrição; obtenha esses textos com as ferramentas apropriadas e registre as limitações. Unidades sem texto retornam estado parcial e código de saída 1.
+Extrai TXT, Markdown, Quarto, HTML, PDF textual, DOCX e EPUB em unidades JSONL com localizadores/hashes e cobertura. O script não faz extração semântica de entidades, OCR ou transcrição. Unidade sem texto é parcial; erros de formato são registrados. Exige pasta nova/vazia, preserva a origem e exclui a própria saída da coleta.
 
-Depois leia as unidades e realize a extração semântica conforme SKILL.md: este script **não gera entidades e relações automaticamente**. Produza graph.json com evidências revisadas e provenance.json. O arquivo coverage da extração registra leitura por máquina, não revisão semântica; complemente essa distinção no relatório do corpus.
+O agente lê essas unidades e escreve os registros em `/destino/knowledge/` conforme knowledge-format.md. As unidades JSONL são material de trabalho; a base canônica de conhecimento é Markdown. Mantenha cobertura semântica separada da simples leitura por máquina.
+
+## Migrar um grafo existente
 
 ```sh
-python3 "$SKILL_DIR/scripts/validate_graph.py" "/destino/graph.json"
-"/destino/.venv/bin/python" "$SKILL_DIR/scripts/analyze_graph.py" "/destino/graph.json" --output "/destino/analysis.json"
+"$PYTHON" "$SKILL_DIR/scripts/knowledge.py" import-json "/origem/graph.json" --output "/destino/knowledge"
 ```
 
-A análise retorna componentes, graus e nós isolados. Não elimina componentes nem inventa conexões. O validador verifica estrutura e links entre registros; não garante que a afirmação seja sustentada pelo texto nem que a URL remota esteja acessível.
+Exige pasta nova e preserva o original. Após a migração, edite apenas os Markdown. Relações sem classificação anterior recebem basis: unspecified para não atribuir certeza sem evidência. A migração não relê o corpus nem incorpora automaticamente o texto das fontes.
 
-## Wikipédia: etapa padrão antes dos embeddings
-
-Execute `enrich_wikipedia.py discover`, revise todos os candidatos e execute `apply`, conforme `wikipedia.md`. Finalize graph.json com o resultado antes de gerar embeddings e layout: o enriquecimento muda os bytes e invalida hashes anteriores. A revisão é tarefa do agente, sem pedir ao usuário para escolher cada artigo.
-
-## Embeddings reais
-
-Escolha modelo após conferir model card/licença e idioma. Modelo multilíngue de exemplo: `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`. Prefira `--revision` com commit resolvido para reprodução. O primeiro uso pode baixar pesos públicos; os textos permanecem na inferência local.
+## Validar, indexar e consultar
 
 ```sh
-"/destino/.venv/bin/python" "$SKILL_DIR/scripts/generate_embeddings.py" --graph "/destino/graph.json" --model "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2" --output "/destino/embeddings/entities"
-"/destino/.venv/bin/python" "$SKILL_DIR/scripts/generate_embeddings.py" --units "/destino/corpus/units.jsonl" --model "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2" --output "/destino/embeddings/chunks"
-"/destino/.venv/bin/python" "$SKILL_DIR/scripts/analyze_graph.py" "/destino/graph.json" --embeddings "/destino/embeddings/entities" --output "/destino/analysis-with-neighbors.json"
+"$PYTHON" "$SKILL_DIR/scripts/knowledge.py" validate "/destino"
+"$PYTHON" "$SKILL_DIR/scripts/knowledge.py" build "/destino"
+"$PYTHON" "$SKILL_DIR/scripts/knowledge.py" search "/destino" "contrato API" --kind entity
+"$PYTHON" "$SKILL_DIR/scripts/knowledge.py" neighbors "/destino" "web" --depth 2 --direction out
 ```
 
-Outras opções: `--batch-size`, `--device cpu`, `--cache-dir`, `--local-only`, `--overlap-tokens`. Exige saída nova/vazia. Usa encode simétrico sem prefixo automático; modelos que exigem instruções ou modos assimétricos precisam de adaptação explícita. O tokenizer deve suportar offsets (fast tokenizer). Textos longos são segmentados por tokens e os vetores de entidades são médias renormalizadas dos chunks. O manifesto registra essa decisão. IDs e vetores ficam alinhados; `chunks.mapping.json` contém os offsets para recuperar a evidência. Hashes de texto registram a versão; pesos usam o cache do provedor. O script recompõe a saída, não implementa cache incremental de vetores.
+O build atualiza `.generated/index.sqlite` e exporta graph.json, layout.json, provenance.json, manifest.json e páginas locais de evidências. IDs não dependem do nome do arquivo. As estatísticas changed/unchanged/removed contam documentos; ftsUpdated conta textos modificados no FTS. Projeções relacionais são reconstruídas transacionalmente; documentos inalterados reutilizam o parse e não reindexam o texto.
 
-## Iniciar no navegador
+A busca por texto usa termos, aliases e corpo com BM25. A consulta de vizinhos usa relações explícitas e direção, com profundidade entre 1 e 10. As consultas recusam índice desatualizado; execute build após edição. Não edite o SQLite nem os JSONs gerados.
+
+## Wikipédia obrigatória por padrão
+
+Execute discover sobre a base, revise candidatos pelo sentido, grave uma decisão por nó e aplique sem --output:
 
 ```sh
-python3 "$SKILL_DIR/scripts/start_viewer.py" "/destino/graph.json"
+"$PYTHON" "$SKILL_DIR/scripts/enrich_wikipedia.py" discover "/destino" --report "/destino/.generated/wiki-candidates.json"
+"$PYTHON" "$SKILL_DIR/scripts/enrich_wikipedia.py" apply "/destino" --report "/destino/.generated/wiki-candidates.json" --decisions "/destino/.generated/wiki-decisions.json" --audit "/destino/.generated/wiki-audit.json"
 ```
 
-O comando valida o grafo, gera layout editorial em memória, inicia em `127.0.0.1` numa porta livre e abre o navegador. Não depende de Node, internet, embeddings nem do livro original. O terminal mostra URL e caminho dos dados. Mantenha o processo ativo; encerre com Ctrl+C. Os dados são um snapshot: reinicie depois de editar graph.json.
+Consulte wikipedia.md. O apply revalida artigos, atualiza frontmatters e reconstrói a exportação. Um journal permite recuperar interrupções com `knowledge.py recover /destino`; edições externas divergentes são protegidas. Após cada nova descoberta, use arquivos de relatório/auditoria novos. Uma edição na base entre descoberta e aplicação exige refazer a revisão.
 
-No agente, execute como processo persistente usando a ferramenta de terminal, capture a URL e abra-a pelo browser do app quando disponível. Use `--no-open` para evitar abrir o navegador do sistema nesse caso. O host pode exigir permissão para escutar localhost; declare o bloqueio se ocorrer. Não lance processos desacoplados sem informar como encerrá-los.
+## Embeddings e análise
 
-Opções:
-- `--port 4317`: porta fixa; se ocupada, retorna erro sem encerrar processos alheios.
-- `--no-open`: apenas imprime a URL.
-- `--layout "/destino/layout.json"`: usa layout existente após validar hash e posições.
-- `--export-layout "/destino/layout.json"`: grava o layout sem substituir arquivo existente.
-- `--title "Título do conteúdo"`: título da página.
-- `--config "/destino/viewer-config.json"`: título/subtítulo e rótulos/paleta de tipos/temas.
+```sh
+"$PYTHON" "$SKILL_DIR/scripts/generate_embeddings.py" --graph "/destino" --model "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2" --output "/destino/.generated/embeddings"
+"$PYTHON" "$SKILL_DIR/scripts/analyze_graph.py" "/destino" --embeddings "/destino/.generated/embeddings" --output "/destino/.generated/analysis.json"
+```
 
-O servidor expõe apenas o aplicativo, três JSONs e arquivos em `evidence/` junto ao grafo; não publica o diretório inteiro, corpus ou embeddings. Para fontes locais, gere páginas curtas escapadas em `evidence/` e aponte os campos path/anchor para elas. Links externos continuam usando bookUrl. O launcher não renderiza evidências automaticamente.
+O primeiro uso pode baixar pesos públicos. Prefira --revision com o commit do modelo. Opções: --batch-size, --device cpu, --cache-dir, --local-only, --overlap-tokens. Para chunks do corpus, use --units /destino/corpus/units.jsonl e outra pasta de saída.
 
-O visualizador aceita tipos/temas de outros domínios (slugs minúsculos), com fallback para o nome e cores padrão, ou catálogos em config. A ferramenta original, sem adaptações, continua exigindo seus catálogos fixos. O layout genérico mantém a estrutura esperada (hash e posições), mas usa centros determinados pelos temas presentes; não replica as coordenadas específicas do livro.
+A pasta gerenciada de embeddings v2 pode ser reutilizada: vetores de entidades são reaproveitados por ID e hash semântico, modelo/revisão, versões das bibliotecas e parâmetros. Alterar só Wikipédia ou renomear documento não gera nova inferência; mudar o texto ou um alias recalcula a entidade alterada. Remoções eliminam linhas da matriz. Não reutilize uma pasta antiga sem marcador v2 ou misture chunks e entidades. Chunks são recompostos por completo, sem cache incremental de inferência.
 
-## Recompilar o visualizador quando seu código mudar
+Vetores não entram no frontmatter nem no JSON do visualizador. O manifesto registra hashes do arquivo e do texto semântico, dimensão, normalização, revisão e contadores reused/computed. Tokens/offsets preservam a cobertura de textos longos. O cache dos pesos continua separado do cache dos vetores. O script pode carregar o modelo para verificar sua revisão mesmo quando todos os vetores forem reutilizados.
 
-O bundle pronto fica em `assets/viewer/dist/`; não armazene node_modules na skill. As fontes derivadas estão em `assets/viewer/src/`, com atribuição e licença CC BY-SA 4.0 em `ATTRIBUTION.md` e `LICENSE.md`. As licenças de dependências ficam em `THIRD_PARTY_LICENSES/`.
+## Busca semântica e híbrida
+
+```sh
+"$PYTHON" "$SKILL_DIR/scripts/search_knowledge.py" "/destino" "infraestrutura para comunicação" --mode semantic
+"$PYTHON" "$SKILL_DIR/scripts/search_knowledge.py" "/destino" "infraestrutura para comunicação" --mode hybrid
+```
+
+A busca semântica usa o mesmo modelo/revisão, encode simétrico e normalização da matriz. Exige embeddings válidos e índice atual. Por padrão usa apenas pesos já disponíveis localmente; passe --allow-download para obtê-los e --cache-dir quando necessário. A consulta longa demais é recusada em vez de truncada silenciosamente. O modo híbrido combina rankings lexical e vetorial por RRF; não é uma probabilidade de verdade.
+
+## Abrir no navegador
+
+```sh
+"$PYTHON" "$SKILL_DIR/scripts/start_viewer.py" "/destino"
+```
+
+O launcher valida e compila a base, serve o bundle pronto em 127.0.0.1 numa porta livre e abre o navegador. Não exige Node nem internet; Markdown exige PyYAML. O servidor recebe snapshot: após editar a base, reinicie-o para recarregar os dados. Ctrl+C encerra o processo.
+
+No agente, use processo persistente de terminal com --no-open, capture a URL e abra no browser disponível. Informe como encerrar. Se o host bloquear localhost, solicite a permissão apropriada ou declare o impedimento. Não abra portas públicas.
+
+Opções: --port, --title, --no-open, --config, --layout e --export-layout. Um layout fornecido precisa corresponder aos bytes da exportação atual. Os temas são agrupamentos editoriais, não distâncias de embeddings. O servidor publica apenas bundle, dados do visualizador e evidence/; não expõe os Markdown, o SQLite, os vetores ou o corpus.
+
+## Compatibilidade JSON e recompilação do app
+
+Os scripts de validação, análise, embeddings, Wikipédia e servidor continuam aceitando JSON legado. Para JSON, enrich_wikipedia.py apply ainda exige --output e preserva a entrada. Esse modo não escreve Markdown; use import-json para migrar definitivamente.
 
 ```sh
 npm ci --ignore-scripts --prefix "$SKILL_DIR/assets/viewer"
 npm run build --prefix "$SKILL_DIR/assets/viewer"
 ```
 
-Recompile antes de distribuir uma alteração de fonte. Para servir os dados atuais, basta Python; o grafo não é embutido na compilação. Aplique testes de busca, filtros, relações/fontes, teclado, tela estreita e fallback sem WebGL após mudanças no app.
+Recompile somente se mudar as fontes do visualizador; preserve dist e as licenças. O visualizador continua consumindo o contrato graph-contract.md, sem depender do esquema interno do SQLite.
 
-## Testes incluídos
+## Testes
 
 ```sh
-python3 "$SKILL_DIR/scripts/test_pipeline.py"
-python3 "$SKILL_DIR/scripts/test_wikipedia.py"
+"$PYTHON" -m unittest discover -s "$SKILL_DIR/scripts" -p 'test_*.py'
 ```
 
-Os testes cobrem referências quebradas, colisões de IDs, layout/hash, temas novos, grafo vazio, preservação das origens e exclusão do destino na extração. A inferência exige teste separado com pesos reais; os testes unitários não baixam modelos.
+Os testes de Markdown exigem PyYAML, mas não baixam pesos nem consultam a Wikipédia. Teste inferência real e rede separadamente. Validação estrutural e testes offline não substituem revisão das evidências.

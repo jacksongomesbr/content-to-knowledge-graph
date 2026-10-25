@@ -12,7 +12,7 @@ def validate(graph):
     errors = []
     if not isinstance(graph, dict):
         return ['A raiz deve ser objeto.']
-    if graph.get('schemaVersion') != 1:
+    if type(graph.get('schemaVersion')) is not int or graph.get('schemaVersion') != 1:
         errors.append('schemaVersion deve ser 1.')
     if urlparse(str(graph.get('bookUrl', ''))).scheme not in ('http', 'https') or not urlparse(str(graph.get('bookUrl', ''))).netloc:
         errors.append('bookUrl deve ser URL HTTP(S) absoluta.')
@@ -65,6 +65,7 @@ def validate(graph):
             if kind == 'edge' and any(not isinstance(item.get(k), str) or item[k] not in node_ids for k in ('source', 'target')):
                 errors.append(f'Extremidade inválida: {key}')
             if kind == 'node':
+                if 'math' in item and not isinstance(item['math'], str): errors.append(f'{key}.math deve ser string.')
                 for field in ('type', 'theme'):
                     if not isinstance(item.get(field), str) or not re.fullmatch(r'[a-z0-9][a-z0-9-]*', item[field]): errors.append(f'{key}.{field}: use slug em minúsculas.')
             wiki = item.get('wikipedia')
@@ -75,13 +76,20 @@ def validate(graph):
                 if wiki.get('language') not in ('pt', 'en') or u.scheme != 'https' or u.netloc != f"{wiki.get('language')}.wikipedia.org" or not u.path.startswith('/wiki/'):
                     errors.append(f'Wikipédia inválida: {key}')
                 strings(wiki, ['title', 'verifiedAt'], f'{key}.wikipedia')
-                try: date.fromisoformat(wiki.get('verifiedAt',''))
+                try:
+                    if not re.fullmatch(r'\d{4}-\d{2}-\d{2}',wiki.get('verifiedAt','')): raise ValueError('Formato ISO inválido')
+                    date.fromisoformat(wiki.get('verifiedAt',''))
                 except (ValueError,TypeError): errors.append(f'Data Wikipédia inválida: {key}')
     return errors
 
 
 def load_graph(path):
-    raw = Path(path).read_bytes()
+    path = Path(path)
+    if path.is_dir():
+        from knowledge_store import read_store, graph_bytes
+        _, _, _, graph = read_store(path)
+        return graph, graph_bytes(graph)
+    raw = path.read_bytes()
     graph = json.loads(raw)
     errors = validate(graph)
     if errors:
@@ -109,3 +117,16 @@ def check_layout(layout, graph, raw):
         raise ValueError('IDs de posições diferem dos nós.')
     if any(not isinstance(p, dict) or any(not isinstance(p.get(k), (int, float)) or isinstance(p.get(k), bool) or not math.isfinite(p[k]) for k in ('x','y','z')) for p in positions.values()):
         raise ValueError('Coordenadas inválidas.')
+
+
+def entity_records(path, graph=None):
+    if Path(path).is_dir():
+        from knowledge_store import semantic_records
+        return semantic_records(path)
+    if graph is None: graph, _ = load_graph(path)
+    return [dict(id=n['id'], text='\n'.join([n['label'], *n.get('aliases', []), n['summary'], *([n['math']] if n.get('math') else []), n['detail']])) for n in sorted(graph['nodes'], key=lambda n: n['id'])]
+
+
+def semantic_input_hash(records):
+    payload = sorted((r['id'], r['text']) for r in records)
+    return hashlib.sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True, allow_nan=False).encode()).hexdigest()

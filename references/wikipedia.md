@@ -5,7 +5,7 @@ Execute em toda criação e atualização do grafo, mesmo se o usuário pedir ap
 ## 1. Descobrir candidatos
 
 ```sh
-python3 "$SKILL_DIR/scripts/enrich_wikipedia.py" discover "/destino/graph.json" --report "/destino/wikipedia-candidates.json"
+python3 "$SKILL_DIR/scripts/enrich_wikipedia.py" discover "/destino" --report "/destino/wikipedia-candidates.json"
 ```
 
 O script usa apenas a biblioteca padrão do Python e a API oficial MediaWiki. Consulta português e inglês, resolve redirecionamentos, exclui páginas ausentes, fora do namespace de artigos e de desambiguação. Primeiro busca o título; quando não encontra artigo válido, pesquisa até três candidatos naquele idioma. Não atribui links automaticamente pelo nome. O relatório inclui rótulo/resumo local, título e introdução dos candidatos, URL canônica, pageid e revisão.
@@ -39,18 +39,17 @@ O exemplo é apenas ilustrativo: use os IDs e resultados efetivos, nunca copie u
 ## 3. Verificar e aplicar
 
 ```sh
-python3 "$SKILL_DIR/scripts/enrich_wikipedia.py" apply "/destino/graph.json" \
+python3 "$SKILL_DIR/scripts/enrich_wikipedia.py" apply "/destino" \
   --report "/destino/wikipedia-candidates.json" \
   --decisions "/destino/wikipedia-decisions.json" \
-  --output "/destino/graph.enriched.json" \
   --audit "/destino/wikipedia-audit.json"
 ```
 
-A aplicação exige uma decisão justificada por nó e confere que o grafo é o mesmo da descoberta. Consulta novamente cada pageid selecionado, sem usar cache, para verificar existência, URL canônica, namespace, desambiguação e revisão. Se o artigo mudou, exige nova descoberta e revisão. Só então grava title, url, language e verifiedAt, além de note quando fornecida. Não altera definições, relações ou fontes originais.
+A aplicação exige uma decisão justificada por nó e confere o hash da exportação e o fingerprint dos Markdown da descoberta. Consulta novamente cada pageid selecionado, sem usar cache, para verificar existência, URL canônica, namespace, desambiguação e revisão. Se o artigo mudou, exige nova descoberta e revisão. Só então grava title, url, language e verifiedAt, além de note quando fornecida. Não altera definições, relações ou fontes originais.
 
-Links anteriores também passam pelo fluxo: uma decisão nula os remove do novo arquivo. O script preserva o arquivo de entrada e recusa sobrescrever output/audit; falha de verificação interrompe a gravação do resultado. A auditoria registra escolhas, rejeições, revisões e hashes. Uma decisão sem link com falha de rede na descoberta fica marcada como bloqueada, não como busca concluída.
+Links anteriores também passam pelo fluxo: uma decisão nula os remove do registro resultante. Na base Markdown, omita --output: o script atualiza o campo wikipedia dos documentos, com journal recuperável, e reconstrói o índice e a exportação. Relatório e auditoria devem ser arquivos novos. Falha de verificação interrompe a gravação. Para JSON legado, --output continua obrigatório e preserva a entrada. A auditoria registra escolhas, rejeições, revisões e hashes. Uma decisão sem link com falha de rede na descoberta fica marcada como bloqueada, não como busca concluída.
 
-Depois de revisar o resultado, use o graph.enriched.json como graph.json final do destino (preservando a versão anterior quando necessário) e execute validate_graph.py. Gere os embeddings e o layout **após** esta etapa; se já existirem, seus hashes precisam ser atualizados e sua validade reavaliada. O visualizador já mostra esses links como Leitura complementar, sem consultar a Wikipédia durante a navegação.
+Depois de aplicar, valide a base. O JSON e o layout são reconstruídos a partir dos documentos; não copie um JSON sobre os Markdown. Os vetores existentes continuam válidos se o hash semântico não mudou; reexecute generate_embeddings.py na pasta gerenciada para reaproveitá-los e atualizar o manifesto. O visualizador já mostra esses links como Leitura complementar, sem consultar a Wikipédia durante a navegação.
 
 ## Limites e referências
 

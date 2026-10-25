@@ -1,6 +1,5 @@
-"""Serve the bundled browser viewer with a graph; Python standard library only."""
+"""Serve the bundled browser viewer with a graph; Markdown requires PyYAML; legacy JSON uses the standard library."""
 import argparse
-import functools
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import mimetypes
@@ -33,13 +32,19 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
-    p.add_argument('graph',type=Path,help='graph.json ou diretório que o contém')
+    p.add_argument('graph',type=Path,help='base Markdown, graph.json ou diretório que o contém')
     p.add_argument('--layout',type=Path); p.add_argument('--config',type=Path,help='JSON com title, subtitle, types e themes opcionais')
     p.add_argument('--port',type=int,default=0,help='0 escolhe uma porta livre'); p.add_argument('--no-open',action='store_true')
     p.add_argument('--title',default='Grafo de conhecimento'); p.add_argument('--export-layout',type=Path)
     a=p.parse_args()
-    graph_path=a.graph/'graph.json' if a.graph.is_dir() else a.graph
     try:
+        canonical = a.graph.is_dir() and ((a.graph/'knowledge.yml').exists() or (a.graph/'knowledge/knowledge.yml').exists())
+        if canonical:
+            from knowledge_store import build
+            built = build(a.graph)
+            graph_path = Path(built['generated'])/'graph.json'
+        else:
+            graph_path=a.graph/'graph.json' if a.graph.is_dir() else a.graph
         graph,raw=load_graph(graph_path)
         if a.layout:
             layout=json.loads(a.layout.read_text()); check_layout(layout,graph,raw)

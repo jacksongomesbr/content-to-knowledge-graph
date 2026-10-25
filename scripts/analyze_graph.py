@@ -2,7 +2,7 @@
 import argparse
 import json
 from pathlib import Path
-from graph_tools import load_graph
+from graph_tools import load_graph, entity_records, semantic_input_hash
 
 
 def main():
@@ -19,7 +19,8 @@ def main():
         from sklearn.neighbors import NearestNeighbors
         import hashlib
         manifest=json.loads((a.embeddings/'manifest.json').read_text())
-        if manifest.get('kind')!='entities' or manifest.get('inputSha256')!=hashlib.sha256(raw).hexdigest(): p.error('Embeddings não correspondem aos nós e aos bytes deste grafo.')
+        if a.graph.is_dir() and 'semanticInputSha256' not in manifest: p.error('Base Markdown exige manifesto de embeddings com hash semântico; regenere os vetores.')
+        if manifest.get('kind')!='entities' or (manifest.get('semanticInputSha256') != semantic_input_hash(entity_records(a.graph,graph)) if 'semanticInputSha256' in manifest else manifest.get('inputSha256')!=hashlib.sha256(raw).hexdigest()): p.error('Embeddings não correspondem aos nós e aos bytes deste grafo.')
         ids=json.loads((a.embeddings/'entities.ids.json').read_text()); vectors=np.load(a.embeddings/'entities.npy',allow_pickle=False)
         if vectors.ndim!=2 or len(vectors)!=len(ids) or len(set(ids))!=len(ids) or set(ids)!=set(net) or vectors.shape[1]!=manifest['dimension'] or not np.isfinite(vectors).all(): p.error('Embeddings inválidos ou desalinhados.')
         if np.any(np.linalg.norm(vectors,axis=1)==0): p.error('Vetor nulo.')

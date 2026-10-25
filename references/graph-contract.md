@@ -1,6 +1,6 @@
 # Contrato padrão: grafo-do-livro v1
 
-Gere `graph.json` compatível com `GraphData` da ferramenta grafo-do-livro. A referência original foi inspecionada em `uft-cc-dwm/grafo-do-livro/src/model.ts` em 25/10/2026. O caminho original é referência histórica, não dependência para executar esta skill. Se o usuário indicar outra versão da ferramenta, confira seu modelo e validadores antes de gerar.
+Este é o contrato da **exportação** `.generated/graph.json`; a fonte canônica é Markdown, conforme knowledge-format.md. Gere `graph.json` compatível com `GraphData` da ferramenta grafo-do-livro. A referência original foi inspecionada em `uft-cc-dwm/grafo-do-livro/src/model.ts` em 25/10/2026. O caminho original é referência histórica, não dependência para executar esta skill. Se o usuário indicar outra versão da ferramenta, confira seu modelo e validadores antes de gerar.
 
 ## Campos do JSON
 
@@ -24,7 +24,7 @@ Cada aresta tem `id`, `source`, `target`, `label`, `summary` (strings) e `source
 
 IDs precisam ser únicos inclusive entre nós e arestas: o validador original usa o mesmo conjunto para ambas as coleções. Preserve os IDs em atualizações. Arestas distintas entre o mesmo par podem existir; use IDs sem colisões.
 
-Não use `sourceIds`, listas para `sources`, nem substitua os campos da raiz por `metadata`. Guarde aliases, evidências por trecho, predicados normalizados, inferências (`basis` e justificativa), versões do corpus e metadados de embeddings em arquivos auxiliares indexados pelos IDs. A ferramenta atual não lê esses campos e não busca por aliases. Não anuncie funcionalidades que dependem de adaptação do aplicativo.
+Não use `sourceIds`, listas para `sources`, nem substitua os campos da raiz por `metadata`. Guarde aliases, evidências por trecho e classificação das relações nos Markdown. O compilador exporta informações adicionais para provenance.json; metadados de vetores ficam no manifesto dos embeddings. A ferramenta atual não lê esses campos e não busca por aliases. Não anuncie funcionalidades que dependem de adaptação do aplicativo.
 
 ## Tipos e temas
 
@@ -80,6 +80,6 @@ npm run build
 
 Execute também os fluxos de navegador pertinentes se o aplicativo mudar. O gerador original usa centros por tema e não produz posição para tema desconhecido; alterações de catálogo precisam refletir nesses centros. O layout editorial não usa embeddings e suas distâncias não significam similaridade.
 
-Para saída somente de dados, entregue graph.json na raiz do destino e, quando houver cópia da ferramenta autorizada e disponível, gere layout com seus scripts. Se não puder executar a ferramenta, declare que a integração não foi testada; nunca alegue compatibilidade completa só porque o JSON abre.
+Para saída somente de dados, entregue a base Markdown e graph.json em .generated/ e, quando houver cópia da ferramenta autorizada e disponível, gere layout com seus scripts. Se não puder executar a ferramenta, declare que a integração não foi testada; nunca alegue compatibilidade completa só porque o JSON abre.
 
-Entregue separadamente `coverage.json`, `provenance.json` e `MODEL.md`: origem, idioma, versões, aliases, localizadores precisos, basis e justificativas por ID ficam nesses arquivos. Revise tanto os invariantes estruturais quanto a fidelidade semântica das afirmações.
+Registre coverage.json e MODEL.md no projeto. Os Markdown guardam os atributos canônicos; provenance.json é gerado e não deve ser editado. Revise tanto os invariantes estruturais quanto a fidelidade semântica das afirmações.

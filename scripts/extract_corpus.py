@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 
 SUPPORTED = {'.txt','.md','.qmd','.html','.htm','.pdf','.docx','.epub'}
-SKIP = {'.git','node_modules','.venv','dist','_output','__pycache__'}
+SKIP = {'.generated', '.wikipedia-cache', '.git','node_modules','.venv','dist','_output','__pycache__'}
 
 
 def extract(path):

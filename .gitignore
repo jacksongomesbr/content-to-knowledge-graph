@@ -22,3 +22,7 @@ outputs/
 *.pt
 *.pth
 # The precompiled viewer under assets/viewer/dist is intentionally versioned.
+
+# Rebuildable knowledge indexes, graph exports, caches and vectors.
+.generated/
+.update-pending.json

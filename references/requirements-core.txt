@@ -1,0 +1,2 @@
+# Markdown frontmatter. SQLite/FTS5 is supplied by the Python interpreter.
+PyYAML>=6.0,<7

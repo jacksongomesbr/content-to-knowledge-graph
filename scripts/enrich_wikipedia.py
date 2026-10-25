@@ -151,26 +151,45 @@ def main():
         sub.add_argument('--report',type=Path,required=True);sub.add_argument('--cache',type=Path)
         sub.add_argument('--user-agent',default=USER_AGENT);sub.add_argument('--delay',type=float,default=0.5);sub.add_argument('--timeout',type=float,default=20)
         if name=='apply':
-            sub.add_argument('--decisions',type=Path,required=True);sub.add_argument('--output',type=Path,required=True);sub.add_argument('--audit',type=Path,required=True)
+            sub.add_argument('--decisions',type=Path,required=True);sub.add_argument('--output',type=Path,help='Obrigatório para JSON; omitido para atualizar a base Markdown');sub.add_argument('--audit',type=Path,required=True)
     a=p.parse_args()
     if a.delay<0 or a.timeout<=0: p.error('delay deve ser não negativo; timeout deve ser positivo.')
     if not a.user_agent.strip(): p.error('User-Agent não pode estar vazio.')
+    canonical = a.graph.is_dir()
     protected = {a.graph.resolve()}
+    if a.command == 'apply' and not canonical and not a.output: p.error('--output é obrigatório para JSON.')
+    if a.command == 'apply' and canonical and a.output: p.error('Para Markdown, omita --output: apenas os campos wikipedia dos documentos serão atualizados.')
     if a.command=='discover':
         if a.report.resolve() in protected or a.report.exists(): p.error('Use caminho novo para o relatório.')
     else:
-        paths=[a.report,a.decisions,a.output,a.audit]
-        if len({x.resolve() for x in paths})!=len(paths) or a.output.resolve() in protected or a.audit.resolve() in protected or a.output.exists() or a.audit.exists():
+        paths=[x for x in [a.report,a.decisions,a.output,a.audit] if x is not None]
+        if len({x.resolve() for x in paths})!=len(paths) or (a.output and (a.output.resolve() in protected or a.output.exists())) or a.audit.resolve() in protected or a.audit.exists():
             p.error('Use arquivos distintos e novos para output/audit; a origem é preservada.')
     try:
         graph,raw=load_graph(a.graph)
+        if canonical:
+            from knowledge_store import fingerprint, update_wikipedia, build
+            source_fingerprint = fingerprint(a.graph)
         client=Client(a.cache or a.report.parent/'.wikipedia-cache',a.user_agent,a.delay,a.timeout)
         if a.command=='discover':
-            report=discover(graph,raw,client);atomic_json(a.report,report)
+            report=discover(graph,raw,client)
+            if canonical: report['knowledgeFingerprint'] = source_fingerprint
+            atomic_json(a.report,report)
             return 1 if any(e['errors'] for e in report['entities']) else 0
-        enriched,audit=apply_matches(graph,raw,json.loads(a.report.read_text()),json.loads(a.decisions.read_text()),client)
-        atomic_json(a.output,enriched);audit['outputSha256']=hashlib.sha256(a.output.read_bytes()).hexdigest();atomic_json(a.audit,audit)
-        print(f"{sum(e['status']=='linked' for e in audit['entities'])} links em {a.output}")
+        report=json.loads(a.report.read_text())
+        if canonical and report.get('knowledgeFingerprint') != source_fingerprint: raise ValueError('A base Markdown mudou; refaça discover e a revisão.')
+        enriched,audit=apply_matches(graph,raw,report,json.loads(a.decisions.read_text()),client)
+        if canonical:
+            if fingerprint(a.graph) != source_fingerprint: raise ValueError('A base mudou durante a verificação; nada foi escrito.')
+            changed=update_wikipedia(a.graph,enriched)
+            built=build(a.graph)
+            audit.update(updatedDocuments=changed,knowledgeFingerprint=fingerprint(a.graph))
+            target=Path(built['generated'])/'graph.json'
+        else:
+            atomic_json(a.output,enriched)
+            target=a.output
+        audit['outputSha256']=hashlib.sha256(target.read_bytes()).hexdigest();atomic_json(a.audit,audit)
+        print(f"{sum(e['status']=='linked' for e in audit['entities'])} links em {a.graph if canonical else a.output}")
         return 1 if any(e['status']=='blocked' for e in audit['entities']) else 0
     except (OSError,ValueError,KeyError,TypeError) as exc: p.exit(1,f'Wikipédia: {exc}\n')
 
