@@ -1,4 +1,5 @@
 """Graph metrics and optional embedding neighbors; candidates are not factual edges."""
+from cli_common import Parser, emit, run
 import argparse
 import json
 from pathlib import Path
@@ -6,7 +7,7 @@ from graph_tools import load_graph, entity_records, semantic_input_hash
 
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__); p.add_argument('graph',type=Path); p.add_argument('--output',type=Path,required=True)
+    p=Parser(description=__doc__); p.add_argument('graph',type=Path); p.add_argument('--output',type=Path,required=True)
     p.add_argument('--embeddings',type=Path); p.add_argument('--neighbors',type=int,default=5); a=p.parse_args()
     if a.neighbors<1: p.error('--neighbors deve ser positivo')
     if a.output.exists(): p.error('Arquivo de saída existe; use um novo caminho.')
@@ -33,6 +34,6 @@ def main():
         report['similarityCandidates']=[dict(source=i,target=j,cosine=score) for (i,j),score in sorted(pairs.items(),key=lambda item:-item[1])]
     a.output.parent.mkdir(parents=True,exist_ok=True)
     with a.output.open('x') as f: json.dump(report,f,ensure_ascii=False,indent=2)
-    print(f'Análise em {a.output}')
+    emit(dict(output=str(a.output), nodes=report['nodes'], edges=report['edges']), human=f'Análise em {a.output}')
 
-if __name__=='__main__': main()
+if __name__ == '__main__': raise SystemExit(run(main))

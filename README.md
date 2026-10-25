@@ -9,23 +9,23 @@ Markdown canônico → validação/indexação → SQLite + embeddings
 
 Edite os Markdown; reconstrua os derivados. O JSON preserva a compatibilidade com o visualizador [grafo-do-livro](https://github.com/jacksongomesbr/uft-cc-dwm), mas deixa de ser a fonte principal. IDs são independentes dos nomes dos arquivos.
 
-## Instalar no Codex
+## Instalar e usar com agentes
 
-Clone para uma pasta de skill disponível, preservando uma instalação anterior:
+A pasta segue o formato aberto Agent Skills. Clone ou copie a skill completa para uma raiz de skills configurada no seu host:
 
 ```sh
-git clone https://github.com/jacksongomesbr/content-to-knowledge-graph.git ~/.codex/skills/content-to-knowledge-graph
+git clone https://github.com/jacksongomesbr/content-to-knowledge-graph.git /caminho/de/skills/content-to-knowledge-graph
 ```
 
-Para instalações feitas por clone, atualize com `git -C ~/.codex/skills/content-to-knowledge-graph pull --ff-only`. Abra nova conversa quando o host carregar o catálogo de skills apenas no início.
+O diretório e a descoberta automática dependem do host; não há um caminho universal. Para instalações por clone, use pull --ff-only preservando alterações locais. Hosts sem descoberta de skills podem receber SKILL.md explicitamente. agents/openai.yaml é apenas um adaptador opcional de interface.
 
 ```text
-Use $content-to-knowledge-graph.
+Use a skill content-to-knowledge-graph.
 Origem: /caminho/do/conteudo
 Destino: /caminho/da/base
 ```
 
-O agente inventaria o corpus, extrai entidades/relações e evidências, escreve os Markdown, indexa, consulta a Wikipédia, gera embeddings e abre o visualizador. Pode também entregar apenas dados ou atualizar uma base existente. Extração semântica e revisão de correspondências são tarefas do agente; scripts não aprovam fatos pela igualdade de nomes ou similaridade.
+O agente inventaria o corpus, escreve os registros, indexa, consulta a Wikipédia, gera embeddings e abre o visualizador quando houver interface. Veja [compatibilidade](references/agent-compatibility.md), [llms.txt](llms.txt) e [protocolo para automação](references/cli-protocol.md).
 
 ## Experimentar o exemplo
 
@@ -58,6 +58,9 @@ projeto/
     layout.json
     provenance.json
     manifest.json
+    INDEX.md
+    llms.txt
+    index/*.md
     evidence/*.html
     embeddings/
 ```
@@ -95,10 +98,17 @@ Em toda criação/atualização, o agente executa discover, revisa o sentido dos
 
 Somente rótulos são enviados nas consultas, sem corpus nem embeddings. A leitura complementar não altera as definições ou evidências do material. Restrições explícitas de rede prevalecem; falhas são declaradas como cobertura parcial. Veja o [fluxo completo](references/wikipedia.md).
 
+## Descoberta e consumo por agentes
+
+SKILL.md ensina a tarefa; AGENTS.md orienta manutenção do repositório; llms.txt aponta a documentação. Toda base compilada recebe INDEX.md e catálogos de até 100 registros por página. Use busca e leitura seletiva em vez de carregar todo o corpus. llms.txt não garante descoberta automática e não substitui o SQLite.
+
+Todos os comandos operacionais aceitam --json: envelope comum em stdout, logs em stderr e códigos distintos para erro/uso/cobertura parcial. O servidor emite eventos ready/stopped em JSONL. Veja [o protocolo](references/cli-protocol.md).
+
 ## Scripts e documentação
 
 | Script | Função |
 |---|---|
+| `validate_skill.py` | Validar o contrato Agent Skills, incluindo compatibility |
 | `prepare_environment.py` | Preparar ambiente e testar imports |
 | `extract_corpus.py` | Extrair texto de documentos |
 | `knowledge.py` | Migrar, validar, indexar, buscar, percorrer e recuperar uma base |

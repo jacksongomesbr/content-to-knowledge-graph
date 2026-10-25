@@ -1,4 +1,5 @@
 """Local embeddings with semantic hashes and reusable per-entity vectors."""
+from cli_common import Parser, emit, run
 import argparse
 from datetime import datetime, timezone
 import hashlib
@@ -96,7 +97,7 @@ def embed_entities(model, records, output, signature, batch_size, overlap, np):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = Parser(description=__doc__)
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument('--graph', type=Path, help='Base Markdown ou graph.json legado'); source.add_argument('--units', type=Path)
     parser.add_argument('--model', required=True); parser.add_argument('--revision')
@@ -143,6 +144,6 @@ def main():
         for file in tmp.iterdir(): os.replace(file, output/file.name)
         from knowledge_store import atomic_write
         atomic_write(output/'manifest.json', json.dumps(manifest, ensure_ascii=False, indent=2)+'\n')
-    print(json.dumps(dict(output=str(output), rows=len(ids), dimension=int(matrix.shape[1]), **stats), indent=2))
+    emit(dict(output=str(output), rows=len(ids), dimension=int(matrix.shape[1]), **stats))
 
-if __name__ == '__main__': main()
+if __name__ == '__main__': raise SystemExit(run(main))

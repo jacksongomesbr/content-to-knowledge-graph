@@ -1,0 +1,26 @@
+# Content to Knowledge Graph
+
+> Skill portátil para criar bases Markdown, indexar em SQLite/FTS5 e recuperar conhecimento com busca textual, vetorial e híbrida.
+
+Este arquivo é um mapa de documentação. A entrada executável da skill é SKILL.md; consulte apenas as referências pertinentes à tarefa.
+
+## Começar
+
+- [Skill](SKILL.md): fluxo e critérios de extração, evidência, Wikipédia e entrega.
+- [Instalação e compatibilidade](references/agent-compatibility.md): uso em hosts distintos e requisitos.
+- [Comandos](references/running.md): preparação, migração, consultas, embeddings e visualizador.
+- [Interface programática](references/cli-protocol.md): envelope JSON, logs e códigos de saída.
+
+## Contratos
+
+- [Base Markdown e índice](references/knowledge-format.md): fonte canônica, relações e indexação incremental.
+- [Exportação JSON](references/graph-contract.md): interoperabilidade com o visualizador.
+- [Ambiente e embeddings](references/python-and-embeddings.md): modelos locais e validação.
+- [Wikipédia](references/wikipedia.md): descoberta, revisão e aplicação.
+- [Visualizador](references/explorer.md): comportamentos e limites.
+
+## Desenvolvimento
+
+- [Orientações para agentes](AGENTS.md): manutenção e verificações do repositório.
+- [Contribuições](CONTRIBUTING.md): escopo e testes.
+- [Licença](LICENSE.md): atribuição e compartilhamento.

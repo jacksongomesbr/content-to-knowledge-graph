@@ -1,4 +1,5 @@
 """Local lexical, semantic or hybrid retrieval from the Markdown knowledge index."""
+from cli_common import Parser, emit, run
 import argparse
 import hashlib
 import json
@@ -53,12 +54,12 @@ def retrieve(root, query, mode='lexical', limit=10, embeddings=None, cache_dir=N
 
 
 def main():
-    parser=argparse.ArgumentParser(description=__doc__)
+    parser=Parser(description=__doc__)
     parser.add_argument('root',type=Path);parser.add_argument('query');parser.add_argument('--mode',choices=['lexical','semantic','hybrid'],default='lexical')
     parser.add_argument('--limit',type=int,default=10);parser.add_argument('--embeddings',type=Path);parser.add_argument('--cache-dir',type=Path);parser.add_argument('--allow-download',action='store_true')
     args=parser.parse_args()
     try:
-        print(json.dumps(retrieve(args.root,args.query,args.mode,args.limit,args.embeddings,args.cache_dir,args.allow_download),ensure_ascii=False,indent=2))
+        emit(retrieve(args.root,args.query,args.mode,args.limit,args.embeddings,args.cache_dir,args.allow_download))
     except (ValueError,OSError,KeyError,ImportError) as exc: parser.exit(1,f'Busca: {exc}\n')
 
-if __name__=='__main__':main()
+if __name__ == '__main__': raise SystemExit(run(main))

@@ -1,5 +1,7 @@
 """Discover Wikipedia articles, then apply reviewed matches to grafo-do-livro data."""
+from cli_common import Parser, emit, run
 import argparse
+import sys
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -105,7 +107,7 @@ def discover(graph, raw, client):
                 entry['errors'].append(dict(language=language,error=str(exc)))
         if not entry['candidates']: entry['status'] = 'blocked' if entry['errors'] else 'no_candidates'
         entries.append(entry)
-        print(f"{node['id']}: {len(entry['candidates'])} candidatos",flush=True)
+        print(f"{node['id']}: {len(entry['candidates'])} candidatos",flush=True,file=sys.stderr)
     return dict(schemaVersion=1,graphSha256=hashlib.sha256(raw).hexdigest(),generatedAt=datetime.now(timezone.utc).isoformat(),note='Candidatos, não correspondências aprovadas. Revise o sentido no contexto, priorizando português.',entities=entries)
 
 
@@ -144,7 +146,7 @@ def apply_matches(graph, raw, report, decisions, client):
 
 
 def main():
-    p = argparse.ArgumentParser(description=__doc__)
+    p = Parser(description=__doc__)
     commands=p.add_subparsers(dest='command',required=True)
     for name in ('discover','apply'):
         sub=commands.add_parser(name);sub.add_argument('graph',type=Path)
@@ -175,7 +177,9 @@ def main():
             report=discover(graph,raw,client)
             if canonical: report['knowledgeFingerprint'] = source_fingerprint
             atomic_json(a.report,report)
-            return 1 if any(e['errors'] for e in report['entities']) else 0
+            partial = any(e['errors'] for e in report['entities'])
+            emit(dict(report=str(a.report), entities=len(report['entities']), blocked=sum(bool(e['errors']) for e in report['entities'])), status='partial' if partial else 'success')
+            return 3 if partial else 0
         report=json.loads(a.report.read_text())
         if canonical and report.get('knowledgeFingerprint') != source_fingerprint: raise ValueError('A base Markdown mudou; refaça discover e a revisão.')
         enriched,audit=apply_matches(graph,raw,report,json.loads(a.decisions.read_text()),client)
@@ -189,8 +193,9 @@ def main():
             atomic_json(a.output,enriched)
             target=a.output
         audit['outputSha256']=hashlib.sha256(target.read_bytes()).hexdigest();atomic_json(a.audit,audit)
-        print(f"{sum(e['status']=='linked' for e in audit['entities'])} links em {a.graph if canonical else a.output}")
-        return 1 if any(e['status']=='blocked' for e in audit['entities']) else 0
+        partial = any(e["status"]=="blocked" for e in audit["entities"])
+        emit(dict(target=str(a.graph if canonical else a.output), audit=str(a.audit), linked=sum(e["status"]=="linked" for e in audit["entities"])), human=f"{sum(e['status']=='linked' for e in audit['entities'])} links em {a.graph if canonical else a.output}", status="partial" if partial else "success")
+        return 3 if partial else 0
     except (OSError,ValueError,KeyError,TypeError) as exc: p.exit(1,f'Wikipédia: {exc}\n')
 
-if __name__=='__main__': raise SystemExit(main())
+if __name__ == '__main__': raise SystemExit(run(main))

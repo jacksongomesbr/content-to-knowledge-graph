@@ -12,7 +12,7 @@ O script usa apenas a biblioteca padrão do Python e a API oficial MediaWiki. Co
 
 Somente o rótulo da entidade é enviado nas consultas; o script não envia o corpus, resumos ou embeddings. Respeite restrições explícitas do usuário sobre rede ou confidencialidade. As consultas são sequenciais, com User-Agent identificável, maxlag, timeout, cache de 24 horas e até três tentativas para falhas transitórias. Pode-se ajustar `--user-agent`, `--delay`, `--timeout` e `--cache`. O padrão consulta ambos os idiomas para permitir ao agente comparar sentidos; a preferência de seleção é português.
 
-Use relatório novo a cada descoberta; o cache pode ser reaproveitado. Uma falha de rede fica registrada por entidade/idioma e retorna código 1, mantendo o relatório para retomada. Não transforme falha de consulta em prova de inexistência de artigo.
+Use relatório novo a cada descoberta; o cache pode ser reaproveitado. Uma falha de rede fica registrada por entidade/idioma e retorna código 3, mantendo o relatório para retomada. Não transforme falha de consulta em prova de inexistência de artigo.
 
 ## 2. Revisar o sentido — tarefa do agente
 

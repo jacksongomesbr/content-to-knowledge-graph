@@ -1,4 +1,5 @@
 """Serve the bundled browser viewer with a graph; Markdown requires PyYAML; legacy JSON uses the standard library."""
+from cli_common import Parser, emit, run
 import argparse
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -31,7 +32,7 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__)
+    p=Parser(description=__doc__)
     p.add_argument('graph',type=Path,help='base Markdown, graph.json ou diretório que o contém')
     p.add_argument('--layout',type=Path); p.add_argument('--config',type=Path,help='JSON com title, subtitle, types e themes opcionais')
     p.add_argument('--port',type=int,default=0,help='0 escolhe uma porta livre'); p.add_argument('--no-open',action='store_true')
@@ -66,10 +67,11 @@ def main():
     server.assets=assets; server.graph_dir=graph_path.resolve().parent
     server.payloads={'/graph.json':raw,'/layout.json':json.dumps(layout).encode(),'/viewer-config.json':json.dumps(config).encode()}
     url=f'http://127.0.0.1:{server.server_port}/'
-    print(f'Visualizador: {url}\nDados: {graph_path.resolve()}\nCtrl+C para encerrar.',flush=True)
+    emit(dict(url=url, graph=str(graph_path.resolve()), host='127.0.0.1', port=server.server_port), human=f'Visualizador: {url}\nDados: {graph_path.resolve()}\nCtrl+C para encerrar.', status='ready')
     if not a.no_open: webbrowser.open(url)
     try: server.serve_forever()
     except KeyboardInterrupt: pass
     finally: server.server_close()
+    emit(dict(url=url), human='Visualizador encerrado.', status='stopped')
 
-if __name__=='__main__': main()
+if __name__ == '__main__': raise SystemExit(run(main))

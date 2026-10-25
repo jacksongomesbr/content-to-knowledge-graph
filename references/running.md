@@ -2,6 +2,8 @@
 
 Resolva SKILL_DIR como a pasta da skill e PYTHON como o executável do ambiente escolhido. No Windows, o Python de venv fica em Scripts/python.exe. Os caminhos abaixo são exemplos, substitua-os pelo destino real.
 
+Para integração programática, use --json conforme cli-protocol.md. Sem browser no host, inicie com --no-open --json e capture o evento ready. Instalação e caminhos de skills estão em agent-compatibility.md.
+
 ## Ambiente
 
 ```sh
@@ -40,7 +42,7 @@ Exige pasta nova e preserva o original. Após a migração, edite apenas os Mark
 "$PYTHON" "$SKILL_DIR/scripts/knowledge.py" neighbors "/destino" "web" --depth 2 --direction out
 ```
 
-O build atualiza `.generated/index.sqlite` e exporta graph.json, layout.json, provenance.json, manifest.json e páginas locais de evidências. IDs não dependem do nome do arquivo. As estatísticas changed/unchanged/removed contam documentos; ftsUpdated conta textos modificados no FTS. Projeções relacionais são reconstruídas transacionalmente; documentos inalterados reutilizam o parse e não reindexam o texto.
+O build atualiza `.generated/index.sqlite` e exporta graph.json, layout.json, provenance.json, manifest.json, INDEX.md, llms.txt, catálogos paginados e páginas locais de evidências. IDs não dependem do nome do arquivo. As estatísticas changed/unchanged/removed contam documentos; ftsUpdated conta textos modificados no FTS. Projeções relacionais são reconstruídas transacionalmente; documentos inalterados reutilizam o parse e não reindexam o texto.
 
 A busca por texto usa termos, aliases e corpo com BM25. A consulta de vizinhos usa relações explícitas e direção, com profundidade entre 1 e 10. As consultas recusam índice desatualizado; execute build após edição. Não edite o SQLite nem os JSONs gerados.
 

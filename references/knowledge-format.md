@@ -13,6 +13,9 @@ projeto/
   .generated/
     index.sqlite
     manifest.json
+    INDEX.md
+    llms.txt
+    index/*.md
     graph.json
     layout.json
     provenance.json
@@ -141,3 +144,9 @@ python scripts/knowledge.py build /destino
 O importador exige pasta nova, mantém o JSON original e preserva IDs, campos e explicações. Os nomes gerados têm um sufixo derivado do ID para evitar colisões de filesystem; podem ser renomeados depois. A migração não incorpora automaticamente o corpus original nem pressupõe que o leu.
 
 Depois da migração, edite apenas os Markdown. O JSON legado continua aceito pelos scripts para interoperabilidade; edições nele não retornam à base Markdown.
+
+## Navegação para agentes
+
+O build gera .generated/INDEX.md, .generated/llms.txt e catálogos por coleção em .generated/index/. Cada página tem até 100 registros; links apontam aos Markdown canônicos por caminhos relativos. As entradas iniciais são exemplos em ordem de ID, não uma classificação de importância. Páginas antigas são removidas quando a coleção diminui. Esses arquivos são reconstruíveis e não entram no corpus.
+
+A navegação é de filesystem; o visualizador não expõe esses documentos nem os Markdown canônicos por HTTP. O llms.txt do repositório é separado e mapeia a documentação da skill. Use os comandos com --json para recuperar dados sem interpretar mensagens humanas.

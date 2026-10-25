@@ -394,13 +394,17 @@ def build(path):
             pages.setdefault(destination, []).append(section)
         for name, sections in pages.items():
             outputs[name] = '<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Fontes do grafo</title><main>'+''.join(sections)+'</main></html>\n'
+        from agent_index import navigation_outputs
+        outputs.update(navigation_outputs(root, records, output, COLLECTIONS))
         previous_manifest = output / 'manifest.json'
         old_files = json.loads(previous_manifest.read_text()).get('files', []) if previous_manifest.exists() else []
         for name in old_files:
             target = output/name
-            if name not in outputs and str(name).startswith('evidence/') and target.resolve().is_relative_to(output.resolve()) and target.is_file(): target.unlink()
+            if name not in outputs and str(name).startswith(('evidence/','index/')) and target.resolve().is_relative_to(output.resolve()) and target.is_file(): target.unlink()
         for name, content in outputs.items():
-            file = output / name; content = content.encode() if isinstance(content, str) else content
+            file = output / name
+            if not file.resolve().is_relative_to(output.resolve()): raise ValueError('Artefato gerado fora de .generated; symlink recusado.')
+            content = content.encode() if isinstance(content, str) else content
             if not file.exists() or file.read_bytes() != content: atomic_write(file, content)
         atomic_write(output / 'manifest.json', json.dumps(dict(version=INDEX_VERSION, fingerprint=current_fingerprint, graphSha256=digest(raw), files=sorted(outputs)), indent=2)+'\n')
         return dict(root=str(root), generated=str(output), **stats)

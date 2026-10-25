@@ -1,11 +1,19 @@
 ---
 name: content-to-knowledge-graph
 description: Crie ou atualize uma base de conhecimento em Markdown com frontmatter a partir de livros, documentos, pastas, páginas ou skills de conteúdo. Extraia entidades e relações com fontes rastreáveis, indexe em SQLite e exporte um grafo interativo compatível com grafo-do-livro. Não se destina a converter livros em skills nem a mapear chamadas de código.
+license: CC-BY-SA-4.0; consulte LICENSE.md
+compatibility: Agente com leitura de arquivos e execução de Python. Perfil core exige PyYAML e SQLite/FTS5; análise e embeddings usam dependências próprias. Rede para Wikipédia e download inicial de modelos; Node apenas para recompilar o visualizador.
 ---
 
 # Conteúdo para grafo de conhecimento
 
 Transforme o conteúdo indicado em uma base de entidades e proposições verificáveis. Use Markdown com frontmatter como fonte canônica; SQLite/FTS5, embeddings, graph.json e layout são derivados reconstruíveis. Não fixe domínio, livro, autor, idioma ou quantidade de nós.
+
+## Portabilidade e descoberta
+
+Esta skill usa o formato Agent Skills e não exige Codex. Leia `references/agent-compatibility.md` para instalação e capacidades do host. Metadados em agents/openai.yaml são opcionais. Para automação, prefira --json conforme `references/cli-protocol.md`; use códigos de saída e dados estruturados, nunca parsing de logs humanos.
+
+O llms.txt do repositório é um mapa de referências, não outra fonte de instruções. Nas bases geradas, comece por .generated/INDEX.md e seus catálogos paginados; leia apenas os documentos pertinentes. Não concatene a base inteira nem gere llms-full.txt por padrão.
 
 ## Entradas e padrões
 
@@ -46,7 +54,7 @@ Revise duplicatas, relações vagas e lacunas de cobertura após consolidar os l
 
 ## Índice, busca e exportação
 
-Execute `knowledge.py build` para validar documentos e gerar `.generated/index.sqlite`, graph.json, layout.json, provenance.json e páginas locais de evidências. O índice usa hashes, atualiza documentos/FTS alterados e reconstrói as projeções relacionais transacionalmente. Arquivos removidos saem do índice. Índices desatualizados não podem responder consultas.
+Execute `knowledge.py build` para validar documentos e gerar `.generated/index.sqlite`, graph.json, layout.json, provenance.json, INDEX.md, llms.txt, catálogos paginados e páginas locais de evidências. O índice usa hashes, atualiza documentos/FTS alterados e reconstrói as projeções relacionais transacionalmente. Arquivos removidos saem do índice. Índices desatualizados não podem responder consultas.
 
 Use `knowledge.py search` para busca textual, `knowledge.py neighbors` para percursos direcionados e `search_knowledge.py` para recuperação semântica ou híbrida. Similaridade não confirma identidade nem relação factual. Não imponha limiar sem calibração no corpus.
 
@@ -66,7 +74,7 @@ Valide valores finitos, normalização, dimensões, IDs, revisão e manifesto. N
 
 ## Visualizador e entrega
 
-Use o bundle pronto em assets/viewer/dist/. Inicie `python <pasta-da-skill>/scripts/start_viewer.py <destino> --no-open` como processo persistente. O launcher compila a base, serve em localhost e imprime a URL; abra-a no navegador disponível e informe como encerrar. Sem browser controlado, omita --no-open para abrir o padrão do sistema. Node só é necessário para recompilar fontes do visualizador. Não copie dados do livro original.
+Use o bundle pronto em assets/viewer/dist/. Inicie `python <pasta-da-skill>/scripts/start_viewer.py <destino> --no-open --json` como processo persistente. O launcher compila a base, serve em localhost e imprime a URL; abra-a no navegador disponível e informe como encerrar. Em ambiente sem interface, mantenha --no-open e entregue a URL; em desktop, pode omitir o sinalizador para abrir o browser padrão do sistema. Node só é necessário para recompilar fontes do visualizador. Não copie dados do livro original.
 
 Confira busca, filtros, seleção, relações e fontes quando mudar a integração. Preserve créditos e licenças do visualizador. Não publique, faça push ou altere a integração do livro apenas para gerar uma base local.
 
@@ -76,7 +84,7 @@ Informe caminho da base, comandos, totais, validações, URL do visualizador qua
 
 ## Exemplos
 
-“Use $content-to-knowledge-graph com origem /dados/manual e destino /projetos/grafo-manual.”
+“Use a skill content-to-knowledge-graph com origem /dados/manual e destino /projetos/grafo-manual.”
 
 “Atualize a base em /projetos/mapa com os capítulos revisados em /dados/livro.”
 

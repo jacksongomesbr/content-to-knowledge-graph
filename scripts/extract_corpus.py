@@ -1,4 +1,5 @@
 """Extract document text to JSONL units with locators. No semantic graph extraction."""
+from cli_common import Parser, emit, run
 import argparse
 import hashlib
 import json
@@ -42,7 +43,7 @@ def extract(path):
 
 
 def main():
-    p=argparse.ArgumentParser(description=__doc__); p.add_argument('origins', nargs='+', type=Path); p.add_argument('--output', required=True, type=Path)
+    p=Parser(description=__doc__); p.add_argument('origins', nargs='+', type=Path); p.add_argument('--output', required=True, type=Path)
     a=p.parse_args(); output=a.output.resolve()
     if output.exists() and any(output.iterdir()): p.error('Use uma pasta de extração nova/vazia para preservar resultados existentes.')
     output.mkdir(parents=True,exist_ok=True); units=[]; coverage=[]; seen=set()
@@ -70,7 +71,8 @@ def main():
             coverage.append(item)
     (output/'units.jsonl').write_text(''.join(json.dumps(u,ensure_ascii=False)+'\n' for u in units))
     (output/'coverage.json').write_text(json.dumps(coverage,ensure_ascii=False,indent=2)+'\n')
-    print(f'{len(units)} unidades; {len(coverage)} arquivos. Extração textual não equivale a revisão semântica.')
-    return 1 if any(c['status']!='read' for c in coverage) else 0
+    partial = any(c['status']!='read' for c in coverage)
+    emit(dict(output=str(output), units=len(units), files=len(coverage)), human=f'{len(units)} unidades; {len(coverage)} arquivos. Extração textual não equivale a revisão semântica.', status='partial' if partial else 'success')
+    return 3 if partial else 0
 
-if __name__=='__main__': raise SystemExit(main())
+if __name__ == '__main__': raise SystemExit(run(main))
