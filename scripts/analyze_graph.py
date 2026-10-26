@@ -24,7 +24,9 @@ def main():
         if manifest.get('kind')!='entities' or (manifest.get('semanticInputSha256') != semantic_input_hash(entity_records(a.graph,graph)) if 'semanticInputSha256' in manifest else manifest.get('inputSha256')!=hashlib.sha256(raw).hexdigest()): p.error('Embeddings não correspondem aos nós e aos bytes deste grafo.')
         ids=json.loads((a.embeddings/'entities.ids.json').read_text()); vectors=np.load(a.embeddings/'entities.npy',allow_pickle=False)
         if vectors.ndim!=2 or len(vectors)!=len(ids) or len(set(ids))!=len(ids) or set(ids)!=set(net) or vectors.shape[1]!=manifest['dimension'] or not np.isfinite(vectors).all(): p.error('Embeddings inválidos ou desalinhados.')
-        if np.any(np.linalg.norm(vectors,axis=1)==0): p.error('Vetor nulo.')
+        for name,field in [('entities.npy','matrixSha256'),('entities.ids.json','idsSha256')]:
+            if field in manifest and hashlib.sha256((a.embeddings/name).read_bytes()).hexdigest()!=manifest[field]: p.error('Integridade dos embeddings inválida.')
+        if not np.allclose(np.linalg.norm(vectors,axis=1),1,atol=1e-4): p.error('Vetores devem estar normalizados.')
         k=min(a.neighbors+1,len(ids)); distances,indices=NearestNeighbors(n_neighbors=k,metric='cosine',algorithm='brute').fit(vectors).kneighbors(vectors)
         pairs={}
         for i,row in enumerate(indices):

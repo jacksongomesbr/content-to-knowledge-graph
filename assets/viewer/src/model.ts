@@ -4,42 +4,28 @@ async function loadJson(path: string) {
   return response.json();
 }
 const graph = await loadJson("./graph.json");
-export const viewerConfig = await loadJson("./viewer-config.json") as { title: string; subtitle: string; types?: Record<string, {label: string; plural: string; color: string; shape: string}>; themes?: Record<string,string> };
+export const viewerConfig = await loadJson("./viewer-config.json") as { title: string; subtitle: string; layoutDescription?: string; types?: Record<string, {label: string; plural: string; color: string; shape: string}>; themes?: Record<string,string> };
 
 export const types: Record<string, { label: string; plural: string; color: string; shape: string }> = {
   concept: { label: "Conceito", plural: "Conceitos", color: "#21675c", shape: "ellipse" },
   person: { label: "Pessoa", plural: "Pessoas", color: "#9a552d", shape: "ellipse" },
-  place: { label: "Instituição", plural: "Instituições", color: "#467da4", shape: "diamond" },
-  method: { label: "Estratégia", plural: "Estratégias", color: "#7f6b30", shape: "hexagon" },
-  software: { label: "Tecnologia", plural: "Tecnologias", color: "#615b9d", shape: "round-rectangle" },
-  format: { label: "Artefato", plural: "Artefatos", color: "#6c633b", shape: "round-rectangle" },
-  application: { label: "Plataforma", plural: "Plataformas", color: "#45688d", shape: "round-rectangle" },
+  place: { label: "Lugar", plural: "Lugares", color: "#467da4", shape: "diamond" },
+  method: { label: "Método", plural: "Métodos", color: "#7f6b30", shape: "hexagon" },
+  software: { label: "Software", plural: "Softwares", color: "#615b9d", shape: "round-rectangle" },
+  format: { label: "Formato", plural: "Formatos", color: "#6c633b", shape: "round-rectangle" },
+  application: { label: "Aplicação", plural: "Aplicações", color: "#45688d", shape: "round-rectangle" },
 } as const;
 export type EntityType = string;
-export const themes: Record<string,string> = {
-  navegacao: "Navegação e endereços",
-  formularios: "Formulários e estado compartilhado",
-  arquitetura: "Arquitetura e fronteiras",
-  contrato: "Dados e contrato de API",
-  linguagem: "TypeScript e JavaScript",
-  interfaces: "Estilos e layout",
-  adaptacao: "Adaptação e acessibilidade",
-  fundamentos: "Fundamentos da Web",
-  react: "Estado e componentes",
-  ambiente: "Ambiente Expo",
-  git: "Git e histórico",
-  web: "Web e história",
-  estrategias: "Estratégias de desenvolvimento",
-  tecnologias: "Tecnologias e plataformas",
-  produto: "Problema e produto",
-  processo: "Processo de trabalho",
-} as const;
+export const themes: Record<string,string> = {};
 Object.assign(types, viewerConfig.types || {});
 Object.assign(themes, viewerConfig.themes || {});
 for (const node of graph.nodes) {
   if (!Object.hasOwn(types, node.type)) types[node.type] = { label: node.type, plural: node.type, color: "#21675c", shape: "ellipse" };
   if (!Object.hasOwn(themes, node.theme)) themes[node.theme] = node.theme;
 }
+// Only catalogs represented by this graph belong in filters and legends.
+for (const key of Object.keys(types)) if (!graph.nodes.some((n:Entity)=>n.type===key)) delete types[key];
+for (const key of Object.keys(themes)) if (!graph.nodes.some((n:Entity)=>n.theme===key)) delete themes[key];
 function safeUrl(path: string, base: string): string {
   const url = new URL(path, base);
   if (!["http:", "https:"].includes(url.protocol)) throw new Error("Protocolo de fonte não permitido");
@@ -93,6 +79,7 @@ export interface Entity {
   math?: string;
   wikipedia?: WikipediaReference;
   sources: string[];
+  aliases?: string[];
 }
 export interface Relation {
   id: string;
@@ -163,7 +150,7 @@ export function filterGraph(filters: Filters): {
       (!neighborhood || neighborhood.has(node.id)) &&
       (!query ||
         normalize(
-          `${node.label} ${node.summary} ${types[node.type].label}`,
+          `${node.label} ${(node.aliases || []).join(" ")} ${node.summary} ${node.detail} ${types[node.type].label}`,
         ).includes(query)),
   );
   const ids = new Set(nodes.map((node) => node.id));

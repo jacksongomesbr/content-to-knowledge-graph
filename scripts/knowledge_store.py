@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from contextlib import contextmanager
 import hashlib
 import html
 import json
@@ -115,6 +116,9 @@ class Record:
     @property
     def semantic_text(self):
         m = self.metadata
+        if m.get('semantic_description'):
+            if not isinstance(m['semantic_description'], str): raise ValueError('semantic_description deve ser texto.')
+            return m.get('label', '') + '\n' + m['semantic_description']
         return '\n'.join([m.get('label', ''), *sorted(m.get('aliases', [])), m.get('summary', ''), *([m['math']] if m.get('math') else []), self.body])
 
     @property
@@ -173,6 +177,8 @@ def read_store(path, cache=None):
         for item in evidence:
             if not isinstance(item, dict) or item.get('source') not in source_ids or (not isinstance(item.get('locator'), str) or not item['locator'].strip()) or (record.metadata['kind'] in ('entity','relation') and item.get('source') not in record.metadata.get('sources', [])):
                 raise ValueError(f'{record.path}: evidence exige source existente e locator.')
+    from evidence_passages import compile_evidence
+    compile_evidence(records, '')  # Validate snapshots and bounds before mutating the index.
     return root, config, records, graph
 
 
@@ -181,7 +187,7 @@ def export_graph(config, records):
     for record in sorted(records, key=lambda r: r.key):
         m = record.metadata; kind = m['kind']
         if kind == 'entity':
-            item = {k: v for k, v in m.items() if k not in ('kind', 'entity_type', 'aliases', 'evidence')}
+            item = {k: v for k, v in m.items() if k not in ('kind', 'entity_type', 'evidence')}
             item.update(type=m.get('entity_type'), detail=record.body)
             graph['nodes'].append(item)
         elif kind == 'relation':
@@ -247,7 +253,13 @@ def import_graph(graph_path, destination):
     return destination
 
 
-def update_wikipedia(path, enriched):
+def update_wikipedia(path, enriched, expected_fingerprint=None):
+    with write_lock(path):
+        if expected_fingerprint is not None and fingerprint(path)!=expected_fingerprint: raise ValueError("A base mudou antes da escrita; refaça a revisão.")
+        return _update_wikipedia(path,enriched)
+
+
+def _update_wikipedia(path, enriched):
     """Write only wikipedia fields, with recovery journal for interrupted batches."""
     root, _, records, current = read_store(path)
     from graph_tools import validate
@@ -278,14 +290,20 @@ def update_wikipedia(path, enriched):
 
 
 def recover(path):
+    with write_lock(path): return _recover(path)
+
+
+def _recover(path):
     path = Path(path).resolve()
     root = path if (path / 'knowledge.yml').exists() else path / 'knowledge'
     journal = root / '.update-pending.json'
     if not journal.is_file(): raise ValueError('Nenhuma atualização interrompida encontrada.')
+    if journal.is_symlink(): raise ValueError('Journal não pode ser symlink.')
     updates = json.loads(journal.read_text())
     for update in updates:
-        target = (root / update['path']).resolve()
-        if not target.is_relative_to(root) or target.is_symlink(): raise ValueError('Caminho inválido no journal.')
+        raw_target = root/update['path']
+        target = raw_target.resolve()
+        if not target.is_relative_to(root) or raw_target.is_symlink(): raise ValueError('Caminho inválido no journal.')
         if target.read_text(encoding='utf-8') not in (update['before'], update['after']):
             raise ValueError('Arquivo recebeu edição externa; restauração automática recusada.')
     for update in updates: atomic_write(root / update['path'], update['before'])
@@ -316,7 +334,27 @@ def connect(db):
     return connection
 
 
+@contextmanager
+def write_lock(path):
+    path=Path(path).resolve()
+    root=path if (path/'knowledge.yml').is_file() else path/'knowledge'
+    if not (root/'knowledge.yml').is_file(): raise ValueError('Base Markdown não encontrada.')
+    lock=root/'.write-lock'
+    try:
+        fd=os.open(lock,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+    except FileExistsError:
+        raise ValueError('Outra escrita está ativa ou foi interrompida (.write-lock). Aguarde; após falha, confirme que não há escritor antes de remover o lock.') from None
+    try:
+        with os.fdopen(fd,'w') as stream: json.dump(dict(pid=os.getpid()),stream)
+        yield
+    finally: lock.unlink(missing_ok=True)
+
+
 def build(path):
+    with write_lock(path): return _build(path)
+
+
+def _build(path):
     root = locate(path); output = generated(root)
     if output.is_symlink(): raise ValueError('.generated não pode ser symlink.')
     output.mkdir(parents=True, exist_ok=True)
@@ -375,9 +413,11 @@ def build(path):
             for key, value in dict(version=INDEX_VERSION, fingerprint=current_fingerprint, root=str(root), config=json.dumps(config)).items():
                 connection.execute('INSERT OR REPLACE INTO meta VALUES(?,?)', (key, value))
         raw = graph_bytes(graph)
-        from graph_tools import layout_for
+        from graph_tools import layout_for, preferred_layout
         provenance = {r.key: dict(path=r.path, evidence=r.metadata.get('evidence', []), aliases=r.metadata.get('aliases', []), basis=r.metadata.get('basis'), rationale=r.metadata.get('rationale')) for r in records}
-        outputs = {'graph.json': raw, 'layout.json': json.dumps(layout_for(graph, raw), ensure_ascii=False, indent=2)+'\n', 'provenance.json': json.dumps(provenance, ensure_ascii=False, indent=2)+'\n'}
+        outputs = {'graph.json': raw, 'layout.json': json.dumps(preferred_layout(root, graph, raw), ensure_ascii=False, indent=2)+'\n', 'provenance.json': json.dumps(provenance, ensure_ascii=False, indent=2)+'\n'}
+        from evidence_passages import compile_evidence
+        outputs['evidence/passages.json'] = json.dumps(compile_evidence(records, hashlib.sha256(raw).hexdigest()), ensure_ascii=False, indent=2)+'\n'
         # Local source pages are rebuilt from canonical source documents.
         pages = {}
         for record in records:

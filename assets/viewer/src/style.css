@@ -199,29 +199,14 @@ button {
   width: 26px;
   height: 26px;
 }
-.book-context {
+.content-context {
   font-size: 12px;
   color: var(--muted);
   margin: 0;
 }
-.book-link {
-  font-size: 12px;
-  font-weight: 500;
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  text-decoration: none;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  padding: 10px 13px;
-}
-.book-link:hover {
-  background: var(--surface-soft);
-}
-.book-link svg {
-  width: 16px;
-  height: 16px;
-}
+
+
+
 .workspace {
   display: grid;
   grid-template-columns: 64px minmax(0, 1fr) clamp(270px, 25vw, 350px);
@@ -1038,7 +1023,7 @@ select {
   .workspace.graph-expanded.explorer-open {
     grid-template-columns: 340px minmax(0, 1fr);
   }
-  .book-context {
+  .content-context {
     display: none;
   }
   .details {
@@ -1077,16 +1062,11 @@ select {
     height: 35px;
     border-radius: 9px;
   }
-  .book-context {
+  .content-context {
     display: none;
   }
-  .book-link {
-    font-size: 11px;
-    padding: 8px;
-  }
-  .book-link > svg:last-child {
-    display: none;
-  }
+
+
   .workspace,
   .workspace.explorer-open,
   .workspace.graph-expanded {
@@ -1332,13 +1312,8 @@ select {
     font-size: 7px;
     letter-spacing: 0.08em;
   }
-  .book-link > span {
-    display: none;
-  }
-  .book-link {
-    min-width: 34px;
-    justify-content: center;
-  }
+
+
 }
 
 .graph-unavailable {
@@ -1371,3 +1346,48 @@ select {
     flex-wrap: wrap;
   }
 }
+
+/* Reference cards use the full width for context, with a compact modal affordance. */
+.evidence-reference {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 20px;
+  grid-template-areas:"title action" "location location";
+  align-items:start;
+  gap:8px 12px;
+  box-sizing:border-box;
+  width:100%;
+  margin-top:10px;
+  padding:14px;
+  text-align:left;
+  color:var(--text);
+  background:var(--surface-soft);
+  cursor:pointer;
+}
+.evidence-reference .evidence-reference-title { grid-area:title; margin:0; min-width:0; line-height:1.5; }
+.evidence-reference .evidence-reference-icon { grid-area:action; display:flex; align-items:center; justify-content:center; flex:none; width:20px; height:20px; color:var(--muted); }
+.evidence-reference-icon svg { width:16px; height:16px; }
+.evidence-reference .evidence-reference-location { grid-area:location; display:block; min-width:0; margin:0; color:var(--muted); line-height:1.6; overflow-wrap:anywhere; }
+.evidence-reference:hover .evidence-reference-icon { color:var(--text); }
+.evidence-reference:focus-visible { outline:2px solid var(--green); outline-offset:3px; }
+.evidence-dialog { width:min(760px,calc(100vw - 32px)); max-height:85dvh; overflow:auto; border:1px solid var(--line); border-radius:18px; padding:28px; background:var(--surface); color:var(--text); box-shadow:0 24px 90px #0005; }
+.evidence-dialog::backdrop { background:#101e2866; backdrop-filter:blur(4px); }
+.evidence-dialog-header { display:flex; justify-content:space-between; gap:20px; align-items:flex-start; }
+.evidence-dialog-header h2 { margin:8px 0; font-size:25px; }
+.evidence-dialog-header button { padding:4px 12px; font-size:26px; color:inherit; background:transparent; border:1px solid var(--line); border-radius:8px; cursor:pointer; }
+.evidence-paragraph { white-space:pre-wrap; overflow-wrap:anywhere; font-size:18px; line-height:1.85; padding:22px 0; }
+.evidence-highlight { background:color-mix(in srgb,var(--evidence-color) 18%,transparent); color:inherit; border-bottom:3px solid var(--evidence-color); padding:2px 1px; border-radius:3px; }
+.relation-highlight { border-bottom-style:dashed; }
+.evidence-legend { display:flex; flex-wrap:wrap; gap:16px; font-size:13px; }
+.evidence-legend span { display:flex; align-items:center; gap:7px; }
+.evidence-legend i { width:10px; height:10px; border-radius:50%; }
+.evidence-inference { border-left:3px solid var(--line); padding:10px 16px; font-size:14px; line-height:1.6; }
+
+.evidence-source-details { margin-top:24px; padding-top:16px; border-top:1px solid var(--line); font-size:12px; color:var(--muted); }
+.evidence-source-details summary { cursor:pointer; color:var(--text); padding:4px 0; }
+.evidence-source-details dl { margin:16px 0 0; }
+.evidence-source-details dt { margin-top:12px; font-weight:600; }
+.evidence-source-details dd { margin:4px 0 0; overflow-wrap:anywhere; line-height:1.6; }
+.evidence-source-details code { font-size:11px; }
+
+.evidence-reference .evidence-reference-title { font-size:12px; }
+.evidence-reference .evidence-reference-location { font-size:11px; }

@@ -1,3 +1,5 @@
+import { loadEvidence, evidenceMarkup, initializeEvidence, evidenceIsOpen } from "./evidence";
+await loadEvidence();
 import { initializeAppearance } from "./appearance";
 import { GraphView } from "./graph-view";
 import katex from "katex";
@@ -19,8 +21,6 @@ import {
   paginate,
   related,
   sourceUrl,
-  bibliographyUrl,
-  citationKeys,
   validateGraph,
   type Entity,
   type Relation,
@@ -53,7 +53,6 @@ const icon = (name: string) => {
       '<circle cx="6" cy="6" r="3"/><circle cx="18" cy="7" r="3"/><circle cx="12" cy="19" r="3"/><path d="m9 6 6 1M7 9l4 7m5-6-3 6"/>',
     search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/>',
     arrow: '<path d="M5 12h14m-6-6 6 6-6 6"/>',
-    book: '<path d="M12 5v15M3 4c3-1 6-1 9 1 3-2 6-2 9-1v15c-3-1-6-1-9 1-3-2-6-2-9-1Z"/>',
     fit: '<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/><circle cx="12" cy="12" r="3"/>',
     back: '<path d="M19 12H5m6-6-6 6 6 6"/>',
     close: '<path d="m6 6 12 12M18 6 6 18"/>',
@@ -71,7 +70,7 @@ let listPage = 0;
 const filters: Filters = { query: "", type: "", theme: "" };
 $("#app").innerHTML = `
 <a class="skip-link" href="#details">Pular para a explicação</a>
-<header class="topbar"><a class="brand" href="#"><span class="brand-icon">${icon("graph")}</span><span>Grafo de conhecimento<small>EXPLORADOR DE CONHECIMENTO</small></span></a><p class="book-context">${esc(viewerConfig.subtitle)}</p><div class="topbar-actions"><label class="appearance-control"><span class="sr-only">Aparência</span><select id="appearance" aria-label="Tema de aparência"><option value="system">Sistema</option><option value="light">Claro</option><option value="dark">Escuro</option></select></label><a class="book-link" aria-label="Abrir livro" href="${esc(/^https?:\/\//.test(data.bookUrl) ? data.bookUrl : "#")}" target="_blank" rel="noopener">${icon("book")}<span>Abrir livro</span>${icon("arrow")}</a></div></header>
+<header class="topbar"><a class="brand" href="#"><span class="brand-icon">${icon("graph")}</span><span>Grafo de conhecimento<small>EXPLORADOR DE CONHECIMENTO</small></span></a><p class="content-context">${esc(viewerConfig.subtitle)}</p><div class="topbar-actions"><label class="appearance-control"><span class="sr-only">Aparência</span><select id="appearance" aria-label="Tema de aparência"><option value="system">Sistema</option><option value="light">Claro</option><option value="dark">Escuro</option></select></label></div></header>
 <main class="workspace">
 <h1 class="sr-only">Grafo de conhecimento</h1>
 <aside class="explorer" aria-label="Catálogo do grafo">
@@ -94,9 +93,9 @@ $("#app").innerHTML = `
 <p id="result-count" class="result-count" role="status"></p><div id="entity-list" class="entity-list"></div><nav class="pagination" aria-label="Páginas do catálogo"><button id="previous-page" aria-label="Página anterior">${icon("back")}</button><span id="page-count" role="status"></span><button id="next-page" aria-label="Próxima página">${icon("arrow")}</button></nav>
 <div class="explorer-footer">Um grafo de conhecimento com fontes.<br>Selecione uma entidade ou uma relação.</div></div>
 </aside>
-<section class="graph-area" aria-label="Grafo interativo do livro">
+<section class="graph-area" aria-label="Grafo interativo">
 <div class="graph-top-controls" role="toolbar" aria-label="Ferramentas do grafo"><div class="layout-actions"><button id="relayout" class="toolbar-button">${icon("refresh")} Restaurar vista</button><button id="expand-graph" class="toolbar-button" aria-pressed="false">${icon("expand")}<span>Ampliar grafo</span></button><button id="focus-selection" class="toolbar-button" disabled>Focar seleção</button></div><label class="switch"><input id="neighbors" type="checkbox" disabled> Apenas vizinhos</label><label class="switch"><input id="labels" type="checkbox"> Rótulos das relações</label></div>
-<div id="graph" role="img" aria-label="Grafo de entidades do livro. Use as listas de vértices e arestas para navegar pelo teclado."></div>
+<div id="graph" role="img" aria-label="Grafo de entidades. Use as listas de vértices e arestas para navegar pelo teclado."></div>
 <div id="empty" class="empty" hidden><strong>Nenhuma entidade encontrada</strong><p>Tente outro termo ou limpe os filtros.</p><button id="empty-clear">Limpar filtros</button></div>
 <div class="graph-bottom"><div class="graph-hint">${icon("info")} Arraste para girar · Role para aproximar · Selecione para descobrir</div><div class="zoom-controls"><button id="zoom-out" aria-label="Diminuir zoom">−</button><button id="fit" aria-label="Ajustar grafo à tela">${icon("fit")}</button><button id="zoom-in" aria-label="Aumentar zoom">+</button></div></div>
 <div class="legend" aria-label="Tipos de entidade">${Object.entries(types)
@@ -113,26 +112,8 @@ function refreshGraphAppearance(): void {
   graphView?.appearance();
 }
 initializeAppearance(refreshGraphAppearance);
+initializeEvidence();
 
-function sourceMarkup(keys: string[]): string {
-  const citations = citationKeys(keys);
-  const links = keys
-    .filter((key) => data.sources[key].kind !== "bibliography")
-    .map((key) => {
-      const source = data.sources[key];
-      return `<a class="source-link" href="${esc(sourceUrl(source))}" target="_blank" rel="noopener noreferrer">${icon("book")}<span>${source.chapter > 0 ? `Capítulo ${source.chapter}` : esc(source.title || "Fonte")}<strong>${esc(source.section)}</strong></span>${icon("arrow")}</a>`;
-    })
-    .join("");
-  const references = citations.length
-    ? `<p class="citations">Referências: ${citations
-        .map((key) => {
-          const reference = data.bibliography[key];
-          return `<a class="bibliography-link" data-citation-key="${esc(key)}" title="${esc(reference.label)}" aria-label="${esc(reference.label)}" href="${esc(bibliographyUrl(reference))}" target="_blank" rel="noopener noreferrer">${esc(reference.label)}</a>`;
-        })
-        .join(" · ")}.</p>`
-    : "";
-  return `<section class="sources"><h3>Fontes</h3>${links}${references}<p class="source-note">Confira as evidências e os localizadores nas fontes indicadas.</p></section>`;
-}
 function wikipediaMarkup(node: Entity): string {
   const wiki = node.wikipedia;
   if (!wiki) return "";
@@ -148,7 +129,7 @@ function nodeButton(
 function renderPanel(): void {
   const panel = $("#details");
   if (!selection) {
-    panel.innerHTML = `<div class="panel-top"><span class="eyebrow">SEU PONTO DE PARTIDA</span>${icon("graph")}</div><div class="welcome-mark" aria-hidden="true">${icon("graph")}</div><h2>${esc(viewerConfig.title)}</h2><p class="summary">Explore entidades, relações e fontes do conteúdo analisado. Abra o catálogo para buscar e filtrar.</p><div class="quick-start"><h3>Pontos de partida</h3>${data.nodes.slice(0, 5).map(node => nodeButton(node)).join("") || "<p>O grafo ainda não contém entidades.</p>"}</div><section class="model-note"><h3>Como ler o grafo</h3><p>As setas representam proposições apoiadas nas fontes. As posições agrupam entidades por tema editorial; a distância não mede similaridade, importância ou tempo.</p></section>`;
+    panel.innerHTML = `<div class="panel-top"><span class="eyebrow">SEU PONTO DE PARTIDA</span>${icon("graph")}</div><div class="welcome-mark" aria-hidden="true">${icon("graph")}</div><h2>${esc(viewerConfig.title)}</h2><p class="summary">Explore entidades, relações e fontes do conteúdo analisado. Abra o catálogo para buscar e filtrar.</p><div class="quick-start"><h3>Pontos de partida</h3>${data.nodes.slice(0, 5).map(node => nodeButton(node)).join("") || "<p>O grafo ainda não contém entidades.</p>"}</div><section class="model-note"><h3>Como ler o grafo</h3><p>As setas representam proposições apoiadas nas fontes. ${esc(viewerConfig.layoutDescription || "Posições editoriais por tema; distância não mede similaridade semântica.")}</p></section>`;
     return;
   }
   const item =
@@ -159,7 +140,7 @@ function renderPanel(): void {
   if (selection.kind === "node") {
     const node = item as Entity;
     const edges = related(node.id);
-    panel.innerHTML = `${top}<div class="type-tag" style="--dot:${esc(types[node.type].color)}"><i></i>${esc(types[node.type].label)}</div><h2>${esc(node.label)}</h2><p class="summary">${esc(node.summary)}</p>${node.math ? `<div class="equation">${katex.renderToString(node.math, { displayMode: true, throwOnError: true, trust: false })}</div>` : ""}<p class="detail-text">${esc(node.detail)}</p><div class="panel-divider"></div><section><div class="section-heading"><h3>Relações</h3><span>${edges.length}</span></div><div class="related-list">${edges
+    panel.innerHTML = `${top}<div class="type-tag" style="--dot:${esc(types[node.type].color)}"><i></i>${esc(types[node.type].label)}</div><h2>${esc(node.label)}</h2><p class="summary">${esc(node.summary)}</p>${node.math ? `<div class="equation">${katex.renderToString(node.math, { displayMode: true, throwOnError: false, trust: false })}</div>` : ""}<p class="detail-text">${esc(node.detail)}</p><div class="panel-divider"></div><section><div class="section-heading"><h3>Relações</h3><span>${edges.length}</span></div><div class="related-list">${edges
       .map((edge) => {
         const other = entities.get(
           edge.source === node.id ? edge.target : edge.source,
@@ -168,12 +149,12 @@ function renderPanel(): void {
       })
       .join(
         "",
-      )}</div></section>${sourceMarkup(node.sources)}${wikipediaMarkup(node)}`;
+      )}</div></section>${evidenceMarkup("entity:" + node.id, node.sources)}${wikipediaMarkup(node)}`;
   } else {
     const edge = item as Relation;
     const from = entities.get(edge.source)!;
     const to = entities.get(edge.target)!;
-    panel.innerHTML = `${top}<div class="type-tag relation-tag">RELAÇÃO · ARCO</div><h2 class="relation-title">${esc(from.label)}<span>${esc(edge.label)}</span>${esc(to.label)}</h2><p class="summary">${esc(edge.summary)}</p><section class="endpoints"><h3>Extremidades do arco</h3>${nodeButton(from, "Origem · " + types[from.type].label)}${nodeButton(to, "Destino · " + types[to.type].label)}</section><p class="source-note">A seta indica como ler a relação, da origem para o destino.</p>${sourceMarkup(edge.sources)}`;
+    panel.innerHTML = `${top}<div class="type-tag relation-tag">RELAÇÃO · ARCO</div><h2 class="relation-title">${esc(from.label)}<span>${esc(edge.label)}</span>${esc(to.label)}</h2><p class="summary">${esc(edge.summary)}</p><section class="endpoints"><h3>Extremidades do arco</h3>${nodeButton(from, "Origem · " + types[from.type].label)}${nodeButton(to, "Destino · " + types[to.type].label)}</section><p class="source-note">A seta indica como ler a relação, da origem para o destino.</p>${evidenceMarkup("relation:" + edge.id, edge.sources)}`;
   }
   $("#back")?.addEventListener("click", () => {
     if (history.state?.graphSelection) history.back();
@@ -424,6 +405,7 @@ async function start(): Promise<void> {
   window.addEventListener("hashchange", syncLocation);
   window.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
+      if (evidenceIsOpen()) return;
       if (explorerOpen) setExplorer(false);
       else if (graphExpanded) setGraphExpanded(false);
       else clearSelection();

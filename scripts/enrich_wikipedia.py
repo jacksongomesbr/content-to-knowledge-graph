@@ -15,7 +15,7 @@ from urllib.parse import urlencode, urlparse
 from urllib.request import Request, urlopen
 from graph_tools import load_graph, validate
 
-USER_AGENT = 'ContentKnowledgeGraph/1.0 (https://github.com/jacksongomesbr/uft-cc-dwm; local research tool)'
+USER_AGENT = 'ContentKnowledgeGraph/1.0 (https://github.com/jacksongomesbr/content-to-knowledge-graph; local research tool)'
 
 
 def normalized(value):
@@ -157,8 +157,8 @@ def main():
     a=p.parse_args()
     if a.delay<0 or a.timeout<=0: p.error('delay deve ser não negativo; timeout deve ser positivo.')
     if not a.user_agent.strip(): p.error('User-Agent não pode estar vazio.')
-    canonical = a.graph.is_dir()
-    protected = {a.graph.resolve()}
+    canonical = a.graph.is_dir() and ((a.graph/'knowledge.yml').exists() or (a.graph/'knowledge/knowledge.yml').exists())
+    protected = {a.graph.resolve(), (a.graph/'graph.json').resolve()} if a.graph.is_dir() else {a.graph.resolve()}
     if a.command == 'apply' and not canonical and not a.output: p.error('--output é obrigatório para JSON.')
     if a.command == 'apply' and canonical and a.output: p.error('Para Markdown, omita --output: apenas os campos wikipedia dos documentos serão atualizados.')
     if a.command=='discover':
@@ -185,7 +185,7 @@ def main():
         enriched,audit=apply_matches(graph,raw,report,json.loads(a.decisions.read_text()),client)
         if canonical:
             if fingerprint(a.graph) != source_fingerprint: raise ValueError('A base mudou durante a verificação; nada foi escrito.')
-            changed=update_wikipedia(a.graph,enriched)
+            changed=update_wikipedia(a.graph,enriched,expected_fingerprint=source_fingerprint)
             built=build(a.graph)
             audit.update(updatedDocuments=changed,knowledgeFingerprint=fingerprint(a.graph))
             target=Path(built['generated'])/'graph.json'

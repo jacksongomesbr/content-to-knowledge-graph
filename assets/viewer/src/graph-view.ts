@@ -14,7 +14,7 @@ import {
   PerspectiveCamera,
   Vector3,
 } from "three";
-import { data, entities, related, type Entity, type Relation } from "./model";
+import { data, entities, related, types, type Entity, type Relation } from "./model";
 const layout = await (await fetch("./layout.json")).json() as { positions: Record<string, {x:number;y:number;z:number}> };
 
 type Selection = { kind: "node" | "edge"; id: string } | null;
@@ -164,23 +164,16 @@ export class GraphView {
     );
   }
   private makeNode(node: VisualNode): Group {
-    const shape = node.entity.type;
-    const geometry = ["method", "place"].includes(shape)
+    const shape = types[node.entity.type].shape;
+    const geometry = ["hexagon", "diamond"].includes(shape)
       ? new OctahedronGeometry(3.8)
-      : [
-              "result",
-              "software",
-              "problem",
-              "format",
-              "dataset",
-              "application",
-            ].includes(shape)
+      : ["round-rectangle", "rectangle", "box"].includes(shape)
           ? new BoxGeometry(5.8, 5.8, 5.8)
           : new SphereGeometry(3.1, 16, 12);
     const mesh = new Mesh(
       geometry,
       new MeshBasicMaterial({
-        color: this.colors[`node-${shape}`],
+        color: this.colors[`node-${node.entity.type}`],
         transparent: true,
       }),
     );

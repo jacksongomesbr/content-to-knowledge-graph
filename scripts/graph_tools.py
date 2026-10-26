@@ -48,7 +48,7 @@ def validate(graph):
         if not isinstance(ref, dict):
             errors.append(f'Bibliografia {key} inválida.'); continue
         strings(ref, ['label', 'path'], key); strings(ref, ['anchor'], key, False)
-        if urlparse(ref.get('path', '')).scheme not in ('', 'http', 'https'):
+        if urlparse(str(ref.get('path', ''))).scheme not in ('', 'http', 'https'):
             errors.append(f'{key}.path: protocolo proibido.')
     ids = set()
     node_ids = {n.get('id') for n in graph['nodes'] if isinstance(n, dict) and isinstance(n.get('id'), str)}
@@ -68,14 +68,16 @@ def validate(graph):
                 if 'math' in item and not isinstance(item['math'], str): errors.append(f'{key}.math deve ser string.')
                 for field in ('type', 'theme'):
                     if not isinstance(item.get(field), str) or not re.fullmatch(r'[a-z0-9][a-z0-9-]*', item[field]): errors.append(f'{key}.{field}: use slug em minúsculas.')
+            if 'aliases' in item and (not isinstance(item['aliases'],list) or not all(isinstance(a,str) and a.strip() for a in item['aliases'])): errors.append(f'{key}.aliases inválido.')
             wiki = item.get('wikipedia')
-            if wiki:
+            if 'wikipedia' in item:
                 if not isinstance(wiki, dict):
                     errors.append(f'Wikipédia inválida: {key}'); continue
                 u = urlparse(str(wiki.get('url', '')))
                 if wiki.get('language') not in ('pt', 'en') or u.scheme != 'https' or u.netloc != f"{wiki.get('language')}.wikipedia.org" or not u.path.startswith('/wiki/'):
                     errors.append(f'Wikipédia inválida: {key}')
                 strings(wiki, ['title', 'verifiedAt'], f'{key}.wikipedia')
+                if 'note' in wiki and not isinstance(wiki['note'],str): errors.append(f'{key}.wikipedia.note deve ser texto.')
                 try:
                     if not re.fullmatch(r'\d{4}-\d{2}-\d{2}',wiki.get('verifiedAt','')): raise ValueError('Formato ISO inválido')
                     date.fromisoformat(wiki.get('verifiedAt',''))
@@ -85,6 +87,7 @@ def validate(graph):
 
 def load_graph(path):
     path = Path(path)
+    if path.is_dir() and not ((path/'knowledge.yml').exists() or (path/'knowledge/knowledge.yml').exists()): path=path/'graph.json'
     if path.is_dir():
         from knowledge_store import read_store, graph_bytes
         _, _, _, graph = read_store(path)
@@ -120,7 +123,9 @@ def check_layout(layout, graph, raw):
 
 
 def entity_records(path, graph=None):
-    if Path(path).is_dir():
+    path=Path(path)
+    if path.is_dir() and not ((path/'knowledge.yml').exists() or (path/'knowledge/knowledge.yml').exists()): path=path/'graph.json'
+    if path.is_dir():
         from knowledge_store import semantic_records
         return semantic_records(path)
     if graph is None: graph, _ = load_graph(path)
@@ -130,3 +135,26 @@ def entity_records(path, graph=None):
 def semantic_input_hash(records):
     payload = sorted((r['id'], r['text']) for r in records)
     return hashlib.sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True, allow_nan=False).encode()).hexdigest()
+
+
+def preferred_layout(root, graph, raw):
+    """Reuse a semantic projection only while inputs and vectors match."""
+    root = Path(root)
+    from knowledge_store import generated as generated_path
+    generated = generated_path(root)
+    candidate = generated / 'semantic-layout.json'
+    if not candidate.exists(): return layout_for(graph, raw)
+    try:
+        result = json.loads(candidate.read_text())
+        manifest = json.loads((generated/'embeddings/manifest.json').read_text())
+        if result['semanticInputSha256'] != semantic_input_hash(entity_records(root)):
+            raise ValueError('Texto semântico alterado')
+        if result['matrixSha256'] != manifest['matrixSha256'] or result['matrixSha256'] != hashlib.sha256((generated/'embeddings/entities.npy').read_bytes()).hexdigest():
+            raise ValueError('Embeddings alterados')
+        result['graphSha256'] = hashlib.sha256(raw).hexdigest()
+        check_layout(result, graph, raw)
+        return result
+    except (OSError, ValueError, KeyError, TypeError):
+        fallback = layout_for(graph, raw)
+        fallback['fallbackReason'] = 'Projeção semântica desatualizada; gere embeddings e semantic_layout.py novamente.'
+        return fallback
