@@ -61,6 +61,7 @@ projeto/
     INDEX.md
     llms.txt
     index/*.md
+    evidence/passages.json  # localizadores; sem texto no modo referenciado
     evidence/*.html
     embeddings/
 ```
@@ -127,6 +128,7 @@ Leia [SKILL.md](SKILL.md), [comandos](references/running.md), [Markdown/indexaç
 .venv/bin/python -m unittest discover -s scripts -p 'test_*.py'
 .venv/bin/python -m compileall -q scripts
 npm ci --ignore-scripts --prefix assets/viewer
+npm test --prefix assets/viewer
 npm run build --prefix assets/viewer
 ```
 
@@ -137,3 +139,7 @@ O CI executa testes offline, constrói o índice do exemplo e compila o visualiz
 ## Licença e créditos
 
 Projeto sob [CC BY-SA 4.0](LICENSE.md). O visualizador deriva de **grafo-do-livro**, de **Jackson Gomes**, no projeto uft-cc-dwm; adaptações estão registradas em [ATTRIBUTION.md](assets/viewer/ATTRIBUTION.md). Dependências conservam suas próprias licenças, incluídas no pacote.
+
+## Referências sem duplicação da origem
+
+Novas bases usam content_mode: reference: guardam caminho, SHA-256 e localizadores. A modal recupera o parágrafo ao ser aberta; se a fonte mudou ou não está acessível, informa o limite. A saída padrão não mantém corpus integral. Cópias autossuficientes só são geradas mediante pedido de exportação portátil. Veja o [contrato de evidências](references/knowledge-format.md).

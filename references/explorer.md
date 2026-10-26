@@ -5,11 +5,11 @@ O padrão é uma aplicação local com dados separados da apresentação. Para c
 ## Comportamentos essenciais
 
 - Mostrar grafo e catálogo textual de entidades e relações.
-- Buscar por nome e resumo; filtrar por tipo e tema. Busca por aliases exige adaptação explícita: a ferramenta original não lê os aliases auxiliares.
+- Buscar por nome, aliases revisados, resumo e descrição; filtrar apenas por tipos e temas presentes na base.
 - Selecionar entidade e ler definição, relações direcionadas e fontes.
 - Selecionar relação e ler a proposição, evidências e eventual inferência.
 - Inspecionar vizinhos e restaurar a visão global.
-- Abrir as fontes quando acessíveis; para arquivos não publicados, mostrar caminho e localizador sem fabricar URL pública.
+- Abrir referências em modal com parágrafo recuperado da origem. Exibir arquivo, localizador e hash em Detalhes da fonte recolhidos, sem links públicos fabricados. Fontes alteradas ou indisponíveis devem mostrar um único diagnóstico; não apresentar avisos de menção ausente sem texto disponível.
 - Preservar seleção por fragmento ou mecanismo equivalente quando viável.
 - Oferecer uso por teclado, foco visível, contraste e layout que funcione em telas estreitas. O catálogo deve continuar utilizável se a renderização gráfica falhar.
 
@@ -19,6 +19,6 @@ Não dependa de APIs externas durante a navegação para mostrar definições. E
 
 ## Verificação observável
 
-Teste uma busca por nome ou resumo (e por alias apenas se implementada), um filtro sem resultados, uma entidade com múltiplas fontes e uma relação com direção identificável. Confira navegação por teclado, tela estreita e acesso textual quando o desenho falhar. Teste caminho de publicação relativo apenas se essa forma de distribuição fizer parte do pedido.
+Teste uma busca por nome ou resumo (inclusive por alias), um filtro sem resultados, uma entidade com múltiplas fontes e uma relação com direção identificável. Confira navegação por teclado, tela estreita e acesso textual quando o desenho falhar. Teste caminho de publicação relativo apenas se essa forma de distribuição fizer parte do pedido.
 
 Automatize validação dos dados e os fluxos críticos na escala adequada ao aplicativo. Registre comandos e resultados no relatório de entrega.

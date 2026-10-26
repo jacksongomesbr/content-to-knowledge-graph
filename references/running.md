@@ -18,12 +18,12 @@ O preparo verifica imports reais e grava requirements-analysis.lock.txt. Há um 
 ## Extração textual e autoria
 
 ```sh
-"$PYTHON" "$SKILL_DIR/scripts/extract_corpus.py" "/origem/livro" --output "/destino/corpus"
+"$PYTHON" "$SKILL_DIR/scripts/extract_corpus.py" "/origem/livro" --output "/temporario/extracao"
 ```
 
 Extrai TXT, Markdown, Quarto, HTML, PDF textual, DOCX e EPUB em unidades JSONL com localizadores/hashes e cobertura. O script não faz extração semântica de entidades, OCR ou transcrição. Unidade sem texto é parcial; erros de formato são registrados. Exige pasta nova/vazia, preserva a origem e exclui a própria saída da coleta.
 
-O agente lê essas unidades e escreve os registros em `/destino/knowledge/` conforme knowledge-format.md. As unidades JSONL são material de trabalho; a base canônica de conhecimento é Markdown. Mantenha cobertura semântica separada da simples leitura por máquina.
+O agente lê essas unidades e escreve os registros em `/destino/knowledge/` conforme knowledge-format.md. Remova os intermediários ao concluir a análise; entregue cobertura e localizadores sem cópia do corpus. O extrator escreve unidades em fluxo, sem acumular o corpus inteiro em memória. As unidades JSONL são material de trabalho; a base canônica de conhecimento é Markdown. Mantenha cobertura semântica separada da simples leitura por máquina.
 
 ## Migrar um grafo existente
 
@@ -64,7 +64,7 @@ Consulte wikipedia.md. O apply revalida artigos, atualiza frontmatters e reconst
 "$PYTHON" "$SKILL_DIR/scripts/analyze_graph.py" "/destino" --embeddings "/destino/.generated/embeddings" --output "/destino/.generated/analysis.json"
 ```
 
-O primeiro uso pode baixar pesos públicos. Prefira --revision com o commit do modelo. Opções: --batch-size, --device cpu, --cache-dir, --local-only, --overlap-tokens. Para chunks do corpus, use --units /destino/corpus/units.jsonl e outra pasta de saída.
+O primeiro uso pode baixar pesos públicos. Prefira --revision com o commit do modelo. Opções: --batch-size, --device cpu, --cache-dir, --local-only, --overlap-tokens. Para chunks do corpus, use --units /temporario/extracao/units.jsonl e outra pasta de saída.
 
 A pasta gerenciada de embeddings v2 pode ser reutilizada: vetores de entidades são reaproveitados por ID e hash semântico, modelo/revisão, versões das bibliotecas e parâmetros. Alterar só Wikipédia ou renomear documento não gera nova inferência; mudar o texto ou um alias recalcula a entidade alterada. Remoções eliminam linhas da matriz. Não reutilize uma pasta antiga sem marcador v2 ou misture chunks e entidades. Chunks são recompostos por completo, sem cache incremental de inferência.
 
@@ -85,7 +85,7 @@ A busca semântica usa o mesmo modelo/revisão, encode simétrico e normalizaç�
 "$PYTHON" "$SKILL_DIR/scripts/start_viewer.py" "/destino"
 ```
 
-O launcher valida e compila a base, serve o bundle pronto em 127.0.0.1 numa porta livre e abre o navegador. Não exige Node nem internet; Markdown exige PyYAML. O servidor recebe snapshot: após editar a base, reinicie-o para recarregar os dados. Ctrl+C encerra o processo.
+O launcher valida e compila a base, serve o bundle pronto em 127.0.0.1 numa porta livre e abre o navegador. Não exige Node nem internet; Markdown exige PyYAML. O grafo e os localizadores são carregados no início: após editar a base, reinicie-o. Os parágrafos são consultados sob demanda na origem, com verificação de SHA-256; mudanças na fonte exigem revalidação. O cache limitado mantém apenas hashes, sem texto integral. Ctrl+C encerra o processo.
 
 No agente, use processo persistente de terminal com --no-open, capture a URL e abra no browser disponível. Informe como encerrar. Se o host bloquear localhost, solicite a permissão apropriada ou declare o impedimento. Não abra portas públicas.
 
@@ -109,3 +109,9 @@ Recompile somente se mudar as fontes do visualizador; preserve dist e as licenç
 ```
 
 Os testes de Markdown exigem PyYAML, mas não baixam pesos nem consultam a Wikipédia. Teste inferência real e rede separadamente. Validação estrutural e testes offline não substituem revisão das evidências.
+
+## Escritas concorrentes
+
+Build, recuperação e atualização da Wikipédia usam um lock exclusivo por base. Agentes devem serializar alterações na mesma base e validar novamente antes de escrever. Um lock remanescente após interrupção abrupta não é removido automaticamente: confirme que o PID registrado não está executando uma escrita antes de remover somente knowledge/.write-lock. Leituras e bases distintas continuam independentes.
+
+Após embeddings, gere posições semânticas antes de iniciar o visualizador: `python scripts/semantic_layout.py --graph DESTINO --json`. Veja [avaliação da projeção](semantic-layout.md). Build e servidor preservam a projeção válida automaticamente.

@@ -24,3 +24,4 @@ Este arquivo é um mapa de documentação. A entrada executável da skill é SKI
 - [Orientações para agentes](AGENTS.md): manutenção e verificações do repositório.
 - [Contribuições](CONTRIBUTING.md): escopo e testes.
 - [Licença](LICENSE.md): atribuição e compartilhamento.
+- [Posicionamento semântico](references/semantic-layout.md): projeção, métricas e descrições contextualizadas.

@@ -14,7 +14,7 @@ python -m unittest discover -s scripts -p 'test_*.py'
 python -m compileall -q scripts
 ```
 
-Se alterar o app, execute npm ci --ignore-scripts e npm run build em assets/viewer e inclua o bundle atualizado. Não exija Node para apenas servir o bundle pronto. Preserve licenças e atribuição.
+Se alterar o app, execute npm ci --ignore-scripts, npm test e npm run build em assets/viewer e inclua o bundle atualizado. Não exija Node para apenas servir o bundle pronto. Preserve licenças e atribuição.
 
 ## Contratos
 

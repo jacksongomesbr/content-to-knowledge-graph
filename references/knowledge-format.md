@@ -62,7 +62,7 @@ A Internet transporta dados entre redes interligadas.
 A Web é um dos sistemas que utilizam essa infraestrutura.
 ```
 
-`id`, `kind`, `label`, `entity_type`, `theme`, `summary` e `sources` são obrigatórios; o corpo não pode estar vazio e vira `detail` na exportação. `aliases` é uma lista de strings únicas. `math` e `wikipedia` mantêm os campos do contrato de exportação. `evidence` é opcional para migração, mas recomendado na extração nova; cada item referencia uma fonte declarada também em sources e tem locator. Outros metadados podem ser preservados, mas não use campos conflitantes com o contrato.
+`id`, `kind`, `label`, `entity_type`, `theme`, `summary` e `sources` são obrigatórios; o corpo não pode estar vazio e vira `detail` na exportação. `aliases` é uma lista de strings únicas, preservada na exportação para busca no visualizador. `math` e `wikipedia` mantêm os campos do contrato de exportação. `evidence` é opcional para migração, mas recomendado na extração nova; cada item referencia uma fonte declarada também em sources e tem locator. Outros metadados podem ser preservados, mas não use campos conflitantes com o contrato.
 
 O índice semântico usa label, aliases ordenados, summary, math quando presente e corpo. Wikipédia, datas, evidências, caminho do arquivo e formatação do frontmatter não entram no texto dos embeddings. Alterar esses metadados pode atualizar o índice/exportação sem exigir nova inferência.
 
@@ -150,3 +150,17 @@ Depois da migração, edite apenas os Markdown. O JSON legado continua aceito pe
 O build gera .generated/INDEX.md, .generated/llms.txt e catálogos por coleção em .generated/index/. Cada página tem até 100 registros; links apontam aos Markdown canônicos por caminhos relativos. As entradas iniciais são exemplos em ordem de ID, não uma classificação de importância. Páginas antigas são removidas quando a coleção diminui. Esses arquivos são reconstruíveis e não entram no corpus.
 
 A navegação é de filesystem; o visualizador não expõe esses documentos nem os Markdown canônicos por HTTP. O llms.txt do repositório é separado e mapeia a documentação da skill. Use os comandos com --json para recuperar dados sem interpretar mensagens humanas.
+
+## Referências por frase ou parágrafo
+
+O padrão é content_mode: reference. A fonte guarda sourceFile absoluto (arquivo cadastrado) e source_sha256 (SHA-256 dos bytes originais), com descrição curta no corpo, sem cópia do documento. Cada evidence guarda source, locator e lines inclusivas, desde 1 na unidade extraída; unit é document para texto/DOCX/HTML, página inteira desde 1 para PDF ou caminho do item EPUB. heading pode guardar a seção revista, permitindo apresentar contexto sem carregar a fonte. Inclua aliases apenas após revisão; relation_text opcional deve existir literalmente no parágrafo.
+
+O build gera .generated/evidence/passages.json apenas com metadados/localizadores. A modal solicita /evidence-passage?id=<ID cadastrado>. O servidor valida o hash e recupera o parágrafo da origem. A API não aceita caminhos, URLs ou intervalos fornecidos pelo navegador. Fonte ausente, alterada ou sem leitor gera aviso explícito, sem usar conteúdo antigo. Texto é lido em fluxo até o parágrafo; PDF extrai somente a página indicada. Outros leitores podem precisar processar a unidade em memória, sem manter cópias persistentes. Não há cache integral padrão. URLs remotas precisam de um leitor conectado e registro de versão; a implementação local declara a indisponibilidade, sem fazer downloads silenciosos.
+
+Os metadados técnicos ficam em Detalhes da fonte, recolhidos. Nomes e aliases literais são destacados com a cor da entidade; predicados literais usam sublinhado tracejado na cor da origem. Inferências mantêm basis/rationale. Destaque lexical não comprova sustentação semântica. O contrato graph.json v1 permanece compatível.
+
+Somente quando o usuário solicitar exportação portátil, pode-se usar content_mode: original com texto único no corpo da fonte e content_sha256 (SHA-256 do corpo UTF-8 após strip). Esse modo preserva compatibilidade com bases anteriores e autoriza parágrafos derivados na exportação. O padrão referenciado depende de a origem continuar acessível.
+
+Extrações de corpus são intermediárias temporárias, fora da saída final. Não mantenha units.jsonl, snapshots integrais ou páginas derivadas com cópias do original em uma entrega referenciada. Atualize o hash e localizadores apenas após revisar mudanças da fonte.
+
+Para entidades com sentido ambíguo, o campo opcional `semantic_description` aceita uma definição contextual textual fiel às fontes. Quando presente, label + descrição substituem o restante da entrada do embedding; não substituem resumo/corpo na interface nem contam como evidência. Veja [posicionamento semântico](semantic-layout.md).
