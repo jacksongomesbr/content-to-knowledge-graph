@@ -32,9 +32,9 @@ def resolve_revision(model, name, revision, cache):
     return resolved
 
 
-def chunks_for(model, record, overlap):
+def chunks_for(model, record, overlap, prefix=""):
     tokenizer = model.tokenizer
-    limit = model.max_seq_length - tokenizer.num_special_tokens_to_add(pair=False)
+    limit = model.max_seq_length - tokenizer.num_special_tokens_to_add(pair=False) - len(tokenizer.encode(prefix, add_special_tokens=False))
     if limit < 1 or overlap >= limit: raise ValueError('Limite de tokens incompatível com overlap.')
     text = record['text']
     if not isinstance(text, str) or not text.strip(): raise ValueError(f"Texto vazio: {record['id']}")
@@ -44,10 +44,10 @@ def chunks_for(model, record, overlap):
     while start < len(token_ids):
         end = min(start + limit, len(token_ids)); char_start = offsets[start][0]; char_end = offsets[end-1][1]
         chunk = text[char_start:char_end]
-        while len(tokenizer.encode(chunk, add_special_tokens=True)) > model.max_seq_length and end > start + 1:
+        while len(tokenizer.encode(prefix + chunk, add_special_tokens=True)) > model.max_seq_length and end > start + 1:
             end -= 1; char_end = offsets[end-1][1]; chunk = text[char_start:char_end]
         if chunk.strip():
-            if len(tokenizer.encode(chunk, add_special_tokens=True)) > model.max_seq_length: raise ValueError('Token excede o limite do modelo.')
+            if len(tokenizer.encode(prefix + chunk, add_special_tokens=True)) > model.max_seq_length: raise ValueError('Token excede o limite do modelo.')
             chunks.append(chunk)
             mapping.append(dict(id=f"{record['id']}::chunk-{len(chunks)}", parentId=record['id'], charStart=char_start, charEnd=char_end, textSha256=sha(chunk.encode()), sourceFile=record.get('sourceFile'), locator=record.get('locator')))
         if end == len(token_ids): break
@@ -75,18 +75,18 @@ def load_cache(output, signature, np):
         return {}, {}, []
 
 
-def embed_entities(model, records, output, signature, batch_size, overlap, np):
+def embed_entities(model, records, output, signature, batch_size, overlap, np, prefix=""):
     vectors, old_hashes, old_mapping = load_cache(output, signature, np)
     hashes = {r['id']: sha(r['text'].encode()) for r in records}
     reused = {r['id'] for r in records if r['id'] in vectors and old_hashes.get(r['id']) == hashes[r['id']]}
     all_chunks, mapping, groups = [], [m for m in old_mapping if m['parentId'] in reused], {}
     for record in records:
         if record['id'] in reused: continue
-        chunks, locators = chunks_for(model, record, overlap)
+        chunks, locators = chunks_for(model, record, overlap, prefix)
         groups[record['id']] = list(range(len(all_chunks), len(all_chunks)+len(chunks)))
         all_chunks.extend(chunks); mapping.extend(locators)
     if all_chunks:
-        encoded = model.encode(all_chunks, batch_size=batch_size, normalize_embeddings=True, convert_to_numpy=True, show_progress_bar=True, prompt="")
+        encoded = model.encode([prefix + text for text in all_chunks], batch_size=batch_size, normalize_embeddings=True, convert_to_numpy=True, show_progress_bar=True, prompt="")
         for identifier, indices in groups.items():
             vector = encoded[indices].mean(axis=0); norm = np.linalg.norm(vector)
             if not np.isfinite(norm) or norm == 0: raise ValueError('Vetor agregado inválido.')
@@ -100,6 +100,7 @@ def main():
     parser = Parser(description=__doc__)
     source = parser.add_mutually_exclusive_group(required=True)
     source.add_argument('--graph', type=Path, help='Base Markdown ou graph.json legado'); source.add_argument('--units', type=Path)
+    parser.add_argument('--prefix', default='', help='Prefixo de cada chunk, conforme o modelo'); parser.add_argument('--query-prefix', help='Prefixo de busca; padrão igual a prefix')
     parser.add_argument('--model', required=True); parser.add_argument('--revision')
     parser.add_argument('--output', type=Path, required=True); parser.add_argument('--batch-size', type=int, default=16)
     parser.add_argument('--device', default='cpu'); parser.add_argument('--local-only', action='store_true')
@@ -120,15 +121,16 @@ def main():
     model = SentenceTransformer(args.model, revision=args.revision, device=args.device, cache_folder=str(args.cache_dir) if args.cache_dir else None, local_files_only=args.local_only, trust_remote_code=False)
     revision = resolve_revision(model, args.model, args.revision, args.cache_dir)
     versions = {name: importlib.metadata.version(name) for name in ('sentence-transformers','torch','numpy')}
-    parameters = dict(model=args.model, revision=revision, versions=versions, device=args.device, maxSequenceLength=model.max_seq_length, overlapTokens=args.overlap_tokens, normalized=True, dtype='float32', prefix='', kind=kind, aggregation='mean-of-normalized-chunks-renormalized' if kind=='entities' else None)
+    parameters = dict(model=args.model, revision=revision, versions=versions, device=args.device, maxSequenceLength=model.max_seq_length, overlapTokens=args.overlap_tokens, normalized=True, dtype='float32', prefix=args.prefix, kind=kind, aggregation='mean-of-normalized-chunks-renormalized' if kind=='entities' else None)
+    if args.query_prefix is not None or args.prefix: parameters['queryPrefix'] = args.query_prefix if args.query_prefix is not None else args.prefix
     signature = sha(json.dumps(parameters, sort_keys=True).encode())
     if kind == 'entities':
-        matrix, ids, mapping, text_hashes, stats = embed_entities(model, records, output, signature, args.batch_size, args.overlap_tokens, np)
+        matrix, ids, mapping, text_hashes, stats = embed_entities(model, records, output, signature, args.batch_size, args.overlap_tokens, np, args.prefix)
     else:
         texts, mapping = [], []
         for record in records:
-            chunks, locators = chunks_for(model, record, args.overlap_tokens); texts.extend(chunks); mapping.extend(locators)
-        matrix = model.encode(texts, batch_size=args.batch_size, normalize_embeddings=True, convert_to_numpy=True, show_progress_bar=True, prompt="")
+            chunks, locators = chunks_for(model, record, args.overlap_tokens, args.prefix); texts.extend(chunks); mapping.extend(locators)
+        matrix = model.encode([args.prefix + text for text in texts], batch_size=args.batch_size, normalize_embeddings=True, convert_to_numpy=True, show_progress_bar=True, prompt="")
         ids = [m['id'] for m in mapping]; text_hashes = {r['id']:sha(r['text'].encode()) for r in records}; stats = dict(reused=0, computed=len(ids))
     matrix = np.asarray(matrix, dtype=np.float32)
     if matrix.ndim != 2 or len(matrix) != len(ids) or not np.isfinite(matrix).all() or not np.allclose(np.linalg.norm(matrix, axis=1), 1, atol=1e-4): raise ValueError('Matriz de embeddings inválida.')

@@ -22,3 +22,17 @@ Essas métricas avaliam fidelidade aos vetores, não verdade semântica. Antes d
 `semantic_description` é um campo opcional textual no frontmatter de entidades Markdown. Quando presente, label + descrição formam a entrada do embedding. Sem o campo, preserva-se label, aliases, resumo, matemática e corpo. A busca textual e o conteúdo exibido continuam usando os textos originais. Uma descrição deve esclarecer o sentido com suporte nas referências existentes. Regenerar embeddings também atualiza hashes e cache. Fontes não são copiadas.
 
 Referências: [modelo multilíngue](https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2), [t-SNE](https://scikit-learn.org/stable/modules/generated/sklearn.manifold.TSNE.html), [trustworthiness](https://scikit-learn.org/stable/modules/generated/sklearn.manifold.trustworthiness.html).
+
+## Validação separada e comparação de modelos
+
+Congele uma lista JSON `{"protocol":"...", "comparisons":[{"anchor":"id", "closer":"id", "farther":"id"}]}` antes de obter os resultados. Separe exemplos que motivaram correções dos usados para avaliação; registre a assinatura SHA-256. Não edite descrições com base na amostra de avaliação e continue chamando-a independente. Os julgamentos são preferências de domínio, podem conter ambiguidades e não medem recall de toda a semântica.
+
+```sh
+python scripts/evaluate_semantics.py --graph DESTINO --embeddings DESTINO/.generated/embeddings --benchmark AMOSTRA.json --output RESULTADO.json --json
+```
+
+O script valida atualidade e integridade dos vetores, registra revisão e prefixo do modelo, pontua comparações e informa intervalo de Wilson. O intervalo é descritivo: a amostra não é aleatória e comparações podem compartilhar conceitos. Se escolher o modelo pelos resultados, essa amostra passa a ser de seleção; use outra para estimar generalização. Não conclua superioridade universal com poucos exemplos.
+
+Para modelos que exigem prefixos, `generate_embeddings.py` aceita `--prefix 'query: '` e `--query-prefix 'query: '`. O prefixo consome tokens em todos os chunks e faz parte da assinatura do cache; a busca respeita o prefixo registrado. O E5 recomenda query: em tarefas simétricas de similaridade, enquanto recuperação pode usar passage: para documentos e query: para consultas. Siga o model card da revisão selecionada. Nunca compare um modelo sem seu formato de entrada exigido.
+
+`semantic_layout.py --perplexity 20` permite avaliar outra escala de vizinhança sem alterar textos nem vetores; o padrão continua 10, limitado pelo tamanho do corpus. Compare preservação local e distâncias globais e registre parâmetros por base, em vez de impor a escolha de uma base a todos os domínios.

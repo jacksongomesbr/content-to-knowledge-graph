@@ -36,9 +36,9 @@ def retrieve(root, query, mode='lexical', limit=10, embeddings=None, cache_dir=N
     from generate_embeddings import resolve_revision
     if resolve_revision(model,manifest['model'],None if local else revision,cache_dir)!=revision:
         raise ValueError('O modelo local difere da revisão usada nos vetores.')
-    if len(model.tokenizer.encode(query,add_special_tokens=True))>model.max_seq_length:
+    if len(model.tokenizer.encode(manifest.get('queryPrefix', manifest.get('prefix', '')) + query,add_special_tokens=True))>model.max_seq_length:
         raise ValueError('Consulta excede o limite de tokens do modelo; reduza o texto.')
-    vector = model.encode([query], normalize_embeddings=True, convert_to_numpy=True, prompt="")[0]
+    vector = model.encode([manifest.get('queryPrefix', manifest.get('prefix', '')) + query], normalize_embeddings=True, convert_to_numpy=True, prompt="")[0]
     scores = matrix @ vector
     semantic = [dict(id=ids[i], cosine=float(scores[i])) for i in np.argsort(-scores,kind='stable')[:100]]
     lexical_ranks = {item['id']:rank for rank,item in enumerate(lexical,1)}

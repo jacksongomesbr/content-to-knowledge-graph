@@ -19,7 +19,7 @@ def metrics(x, y):
 
 
 def main():
-    p=Parser(description=__doc__); p.add_argument('--graph',type=Path,required=True); a=p.parse_args()
+    p=Parser(description=__doc__); p.add_argument('--graph',type=Path,required=True); p.add_argument('--perplexity',type=float,help='Vizinhança t-SNE; padrão min(10, (n-1)/3)'); a=p.parse_args()
     import numpy as np
     from sklearn.manifold import TSNE
     import sklearn
@@ -34,7 +34,8 @@ def main():
         if manifest.get('kind')!='entities' or not manifest.get('resolvedRevision') or x.ndim!=2 or len(x)!=len(ids) or len(set(ids))!=len(ids) or set(ids)!={n['id'] for n in graph['nodes']} or not np.isfinite(x).all() or not np.allclose(np.linalg.norm(x,axis=1),1,atol=1e-4): raise ValueError('Vetores inválidos.')
         if len(ids)<4: raise ValueError('Projeção avaliada requer ao menos quatro entidades.')
         # Fixed policy, independent of hand-selected concept pairs.
-        perplexity=min(10.0,(len(ids)-1)/3)
+        perplexity=a.perplexity if a.perplexity is not None else min(10.0,(len(ids)-1)/3)
+        if not 0 < perplexity < len(ids): raise ValueError('perplexity deve ser positiva e menor que o número de entidades.')
         y=TSNE(n_components=3,metric='cosine',perplexity=perplexity,init='pca',random_state=42,learning_rate='auto',max_iter=1500).fit_transform(x)
         score=metrics(x,y)
         if not all(np.isfinite(v) for v in score.values()): raise ValueError('Métricas indefinidas; verifique vetores duplicados ou degenerados.')
