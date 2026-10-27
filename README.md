@@ -143,3 +143,7 @@ Projeto sob [CC BY-SA 4.0](LICENSE.md). O visualizador deriva de **grafo-do-livr
 ## Referências sem duplicação da origem
 
 Novas bases usam content_mode: reference: guardam caminho, SHA-256 e localizadores. A modal recupera o parágrafo ao ser aberta; se a fonte mudou ou não está acessível, informa o limite. A saída padrão não mantém corpus integral. Cópias autossuficientes só são geradas mediante pedido de exportação portátil. Veja o [contrato de evidências](references/knowledge-format.md).
+
+## Exportação estática
+
+`python scripts/export_site.py --graph BASE --output NOVA_PASTA --evidence paragraphs --json` gera um site para hospedagem HTTP(S), sem backend. Inclui somente parágrafos referenciados e deduplicados; fontes completas, modelos, índice e caminhos absolutos não são publicados. Sem `--evidence paragraphs`, a exportação mantém apenas localizadores. Consulte [execução e cobertura parcial](references/running.md).

@@ -115,3 +115,11 @@ Os testes de Markdown exigem PyYAML, mas não baixam pesos nem consultam a Wikip
 Build, recuperação e atualização da Wikipédia usam um lock exclusivo por base. Agentes devem serializar alterações na mesma base e validar novamente antes de escrever. Um lock remanescente após interrupção abrupta não é removido automaticamente: confirme que o PID registrado não está executando uma escrita antes de remover somente knowledge/.write-lock. Leituras e bases distintas continuam independentes.
 
 Após embeddings, gere posições semânticas antes de iniciar o visualizador: `python scripts/semantic_layout.py --graph DESTINO --json`. Veja [avaliação da projeção](semantic-layout.md). Build e servidor preservam a projeção válida automaticamente.
+
+## Site estático para deploy
+
+```sh
+python scripts/export_site.py --graph DESTINO --output NOVA_PASTA_SITE --evidence paragraphs --json
+```
+
+Inclua `--config viewer-config.json` quando houver catálogo customizado. O destino precisa ser novo. Sirva o resultado por HTTP(S); funciona em subdiretórios e dispensa Python/Node no servidor. Não há deploy automático. `--evidence references` é o padrão sem cópia de texto: mostra que o parágrafo exige a origem local. O modo `paragraphs`, solicitado para uma exportação autossuficiente, inclui somente os parágrafos referenciados, deduplicados. Três referências ausentes, por exemplo, não impedem o site: o comando retorna código 3 e cobertura parcial, com aviso na modal. Não contém a base Markdown, SQLite, modelos ou o corpus integral. Caminhos locais das origens são reduzidos a nomes de arquivo. Confira export-manifest.json e direitos de publicação antes de fazer deploy.

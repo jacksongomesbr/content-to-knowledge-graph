@@ -1,7 +1,7 @@
 import { data, entities, relations, types } from './model';
 
 import { highlighted, type Term } from './evidence-highlight';
-type Passage = {id:string; source:string; locator:string; status:string; text?:string; lines?:number[]; terms?:Term[]; heading?:string; sourceSha256?:string; message?:string};
+type Passage = {id:string; source:string; locator:string; status:string; passagePath?:string; text?:string; lines?:number[]; terms?:Term[]; heading?:string; sourceSha256?:string; message?:string};
 type Entry = {basis?:string; rationale?:string; items:Passage[]};
 let records: Record<string,Entry> = {};
 const escape = (s:string) => s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
@@ -45,9 +45,11 @@ export function initializeEvidence() {
     dialog.innerHTML='<div class="evidence-dialog-header"><h2 id="evidence-title">Contexto da referência</h2><button data-close-evidence aria-label="Fechar contexto">×</button></div><p role="status">Consultando referência…</p>';
     if (!dialog.open) dialog.showModal();
     try {
-      const response=await fetch('./evidence-passage?id='+encodeURIComponent(p.id),{signal:controller.signal});
+      const passageUrl=p.passagePath ? new URL(p.passagePath, location.href) : new URL('./evidence-passage?id='+encodeURIComponent(p.id), location.href);
+      if (passageUrl.origin!==location.origin || !passageUrl.pathname.startsWith(new URL('./',location.href).pathname)) throw new Error('Caminho de referência inválido.');
+      const response=await fetch(passageUrl,{signal:controller.signal});
       if (!response.ok) throw new Error('Referência indisponível no servidor.');
-      p=await response.json() as Passage;
+      p={...p,...await response.json()} as Passage;
     } catch { p={...p,status:'unavailable',message:'Não foi possível consultar a fonte. Verifique o acesso ao arquivo e tente novamente.'}; }
     finally { clearTimeout(timeout); }
     if (!dialog.open || request!==requestSequence) return;
